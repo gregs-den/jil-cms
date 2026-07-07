@@ -2959,7 +2959,7 @@ const UserManagementPage = ({ role }) => {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState({ name:"", email:"", password:"", role:"regular", branch_id:"", member_id:"" });
+  const [form, setForm] = useState({ name:"", username:"", password:"", role:"regular", branch_id:"", member_id:"" });
   const [branches, setBranches] = useState([]);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
@@ -2988,20 +2988,20 @@ const UserManagementPage = ({ role }) => {
     };
 
     Promise.all([
-      supabase.from("profiles").select("id, name, username, role, branch_id, member_id, branches(name)").order("name"),
-      fetchAllMembers(),
-      supabase.from("branches").select("id, name").order("name"),
-    ]).then(([u, m, b]) => {
-      if (u.data) setUsers(u.data);
-      setMembers(m);
-      if (b.data) setBranches(b.data);
-      setLoading(false);
-    });
+  supabase.from("profiles").select("id, name, username, role, branch_id, member_id, branches(name)").order("name"),
+  fetchAllMembers(),
+  supabase.from("branches").select("id, name").order("name"),
+]).then(([u, m, b]) => {
+  if (u.data) setUsers(u.data);
+  setMembers(m);
+  if (b.data) setBranches(b.data);
+  setLoading(false);
+});
   }, []);
 
   const openEdit = (u) => {
     setSelected(u);
-    setForm({ name:u.name||"", email:u.email||"", password:"", role:u.role||"regular", branch_id:u.branch_id||"", member_id:u.member_id||"" });
+    setForm({ name:u.name||"", username:u.username||"", password:"", role:u.role||"regular", branch_id:u.branch_id||"", member_id:u.member_id||"" });
     setModal("edit");
   };
 
@@ -3326,17 +3326,18 @@ const UserManagementPage = ({ role }) => {
         {!form.member_id && (
           <Inp label="Full Name" value={form.name} onChange={v=>setForm({...form,name:v})} placeholder="Juan dela Cruz" required/>
         )}
+        <Inp label="Email Address" value={form.name} onChange={v=>setForm({...form,name:v})} placeholder="juan@example.com" required/>
+          {modal==="edit" && (
+        <Inp label="Username" value={form.username} onChange={v=>setForm({...form,username:v})} placeholder="juandelacruz" required/>
+          )}
         {modal==="invite" && (
-          <>
-            <Inp label="Email Address" value={form.email} onChange={v=>setForm({...form,email:v})} placeholder="juan@example.com" required/>
-            <Inp label="Password" type="password" value={form.password} onChange={v=>setForm({...form,password:v})} placeholder="At least 6 characters" required/>
-          </>
+          <Inp label="Password" type="password" value={form.password} onChange={v=>setForm({...form,password:v})} placeholder="At least 6 characters" required/>
         )}
         <div style={{ display:"flex", flexDirection:"column", gap:5, marginBottom:14 }}>
           <label style={{ fontSize:12, fontWeight:600, color:C.slate }}>Role</label>
           <select value={form.role} onChange={e=>setForm({...form,role:e.target.value})}
             style={{ padding:"10px 14px", border:`1.5px solid ${C.fog}`, borderRadius:R.md, fontSize:14, outline:"none", background:C.white, color:C.ink }}>
-            <option value="regular">Regular Member</option>
+            <option value="member">Regular Member</option>
             <option value="admin">Admin</option>
             <option value="superadmin">Super Admin / Dev</option>
           </select>
@@ -3349,12 +3350,10 @@ const UserManagementPage = ({ role }) => {
             {branches.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         </div>
-        <div style={{ display:"flex", gap:8 }}>
-          <Btn label={saving?"Saving…":modal==="invite"?"Send Invite":"Save Changes"} icon={Ico.send} onClick={saveUser} full/>
-          {modal==="edit" && canResetPassword && (
-            <Btn label="Reset PW" outline color={C.violet} onClick={()=>{ resetPassword(selected); setModal(null); }}/>
-          )}
-        </div>
+        <div style={{ display:"flex", gap:8, justifyContent:"space-between" }}>
+          <Btn label={saving?"Saving…":modal==="invite"?"Send Invite":"Save Changes"} onClick={saveUser}/>
+          <Btn label="Cancel" outline onClick={()=>setModal(null)}/>
+      </div>
       </Modal>
     </div>
   );
