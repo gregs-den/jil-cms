@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "./lib/useAuth";
 import Login from "./components/Login";
-import MembersPage from './pages/MembersPage'
+import MembersPage from './pages//MembersPage'
 import QRGeneratorPage from './pages/QRGeneratorPage'
 import QRCode from "qrcode";
 import { supabase } from "./lib/supabaseClient";
@@ -3036,61 +3036,6 @@ const UserManagementPage = ({ role }) => {
   const [filterRole, setFilterRole] = useState("all");
   const [memberSearch, setMemberSearch] = useState("");
   const mob = useIsMobile();
-  const [resetModalUser, setResetModalUser] = useState(null);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [resetting, setResetting] = useState(false);
-
-  const openResetModal = (user) => {
-    console.log("👉 STEP 1: Opening reset modal for user:", user);
-  setResetModalUser(user);
-  setNewPassword("");
-  setConfirmPassword("");
-  };
-
-  const handleResetPassword = async () => {
-  if (!newPassword || newPassword.length < 6) {
-    alert("Password must be at least 6 characters long.");
-    return;
-  }
-
-  if (newPassword !== confirmPassword) {
-    alert("Passwords do not match. Please check and try again.");
-    return;
-  }
-
-  setResetting(true);
-  try {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData?.session?.access_token;
-
-    if (!accessToken) {
-      alert("Your session has expired. Please log out and back in.");
-      setResetting(false);
-      return;
-    }
-
-    const { data, error } = await supabase.functions.invoke("reset-password", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: {
-        userId: resetModalUser.id,
-        newPassword: newPassword,
-      },
-    });
-
-    if (error || data?.error) {
-      alert("Failed: " + (data?.error || error.message));
-    } else {
-      alert(`Password updated for ${resetModalUser.name || resetModalUser.email}`);
-      setResetModalUser(null);
-    }
-  } catch (err) {
-    console.error("Failed to reset password:", err);
-    alert("Failed to update password.");
-  } finally {
-    setResetting(false);
-  }
-};
 
   useEffect(() => {
     const fetchAllMembers = async () => {
@@ -3332,14 +3277,7 @@ const UserManagementPage = ({ role }) => {
 
                 <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                   <button onClick={()=>openEdit(u)} style={{ border:"none", background:C.blue3, borderRadius:R.sm, padding:"6px 12px", cursor:"pointer", fontSize:12, color:C.blue, fontWeight:600 }}>Edit</button>
-                  {canResetPassword && (
-                    <button 
-                      onClick={()=>openResetModal(u)} 
-                      style={{ border:"none", background:C.violet3, borderRadius:R.sm, padding:"6px 12px", cursor:"pointer", fontSize:12, color:C.violet, fontWeight:600 }}
-                    >
-                      Reset PW
-                    </button>
-                  )}
+                  {canResetPassword && <button onClick={()=>resetPassword(u)} style={{ border:"none", background:C.violet3, borderRadius:R.sm, padding:"6px 12px", cursor:"pointer", fontSize:12, color:C.violet, fontWeight:600 }}>Reset PW</button>}
                   {u.role==="deactivated"
                     ? <button onClick={()=>reactivateUser(u)} style={{ border:"none", background:C.green3, borderRadius:R.sm, padding:"6px 12px", cursor:"pointer", fontSize:12, color:C.green, fontWeight:600 }}>Activate</button>
                     : <button onClick={()=>deactivateUser(u)} style={{ border:"none", background:C.amber3, borderRadius:R.sm, padding:"6px 12px", cursor:"pointer", fontSize:12, color:C.amber, fontWeight:600 }}>Disable</button>
@@ -3408,12 +3346,7 @@ const UserManagementPage = ({ role }) => {
                         <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                           <button onClick={()=>openEdit(u)} style={{ border:"none", background:C.blue3, borderRadius:R.sm, padding:"6px 10px", cursor:"pointer", fontSize:11, color:C.blue, fontWeight:600 }}>Edit</button>
                           {canResetPassword && (
-                            <button 
-                              onClick={()=>openResetModal(u)} 
-                              style={{ border:"none", background:C.violet3, borderRadius:R.sm, padding:"6px 10px", cursor:"pointer", fontSize:11, color:C.violet, fontWeight:600 }}
-                            >
-                              Reset PW
-                            </button>
+                            <button onClick={()=>resetPassword(u)} style={{ border:"none", background:C.violet3, borderRadius:R.sm, padding:"6px 10px", cursor:"pointer", fontSize:11, color:C.violet, fontWeight:600 }}>Reset PW</button>
                           )}
                           {u.role==="deactivated"
                             ? <button onClick={()=>reactivateUser(u)} style={{ border:"none", background:C.green3, borderRadius:R.sm, padding:"6px 10px", cursor:"pointer", fontSize:11, color:C.green, fontWeight:600 }}>Activate</button>
@@ -3490,43 +3423,6 @@ const UserManagementPage = ({ role }) => {
           <Btn label={saving?"Saving…":modal==="invite"?"Send Invite":"Save Changes"} onClick={saveUser}/>
           <Btn label="Cancel" outline onClick={()=>setModal(null)}/>
       </div>
-      </Modal>
-
-      {/* Password Reset Modal (Pattern 2) */}
-      <Modal open={!!resetModalUser} onClose={() => setResetModalUser(null)} title="Reset User Password">
-        {resetModalUser && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ fontSize: 13, color: C.slate }}>
-              Set a new temporary password for <strong style={{ color: C.ink }}>{resetModalUser.name || resetModalUser.email}</strong>.
-            </div>
-
-            <Inp 
-              label="New Password" 
-              type="password" 
-              value={newPassword} 
-              onChange={v => setNewPassword(v)} 
-              placeholder="At least 6 characters" 
-              required 
-            />
-
-            <Inp 
-              label="Confirm New Password" 
-              type="password" 
-              value={confirmPassword} 
-              onChange={v => setConfirmPassword(v)} 
-              placeholder="Re-enter new password" 
-              required 
-            />
-
-            <div style={{ display: "flex", gap: 8, justifyContent: "space-between", marginTop: 6 }}>
-              <Btn 
-                label={resetting ? "Updating…" : "Update Password"} 
-                onClick={handleResetPassword} 
-              />
-              <Btn label="Cancel" outline onClick={() => setResetModalUser(null)} />
-            </div>
-          </div>
-        )}
       </Modal>
     </div>
   );
