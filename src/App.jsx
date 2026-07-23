@@ -3462,7 +3462,7 @@ const UserManagementPage = ({ role }) => {
         {!form.member_id && (
           <Inp label="Full Name" value={form.name} onChange={v=>setForm({...form,name:v})} placeholder="Juan dela Cruz" required/>
         )}
-        <Inp label="Email Address" value={form.name} onChange={v=>setForm({...form,name:v})} placeholder="juan@example.com" required/>
+        <Inp label="Email Address" value={form.email} onChange={v=>setForm({...form,email:v})} placeholder="juan@example.com" required/>
           {modal==="edit" && (
         <Inp label="Username" value={form.username} onChange={v=>setForm({...form,username:v})} placeholder="juandelacruz" required/>
           )}
