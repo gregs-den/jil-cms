@@ -3115,8 +3115,19 @@ const UserManagementPage = ({ role }) => {
   supabase.from("profiles").select("id, name, username, role, branch_id, member_id, branches(name)").order("name"),
   fetchAllMembers(),
   supabase.from("branches").select("id, name").order("name"),
-]).then(([u, m, b]) => {
-  if (u.data) setUsers(u.data);
+  supabase.functions.invoke("list-users"),
+]).then(([u, m, b, authUsers]) => {
+  const emailMap = {};
+  (authUsers?.data?.users || []).forEach(au => {
+    emailMap[au.id] = au.email;
+  });
+
+  const usersWithEmail = (u.data || []).map(profile => ({
+    ...profile,
+    email: emailMap[profile.id] || null,
+  }));
+
+  setUsers(usersWithEmail);
   setMembers(m);
   if (b.data) setBranches(b.data);
   setLoading(false);
