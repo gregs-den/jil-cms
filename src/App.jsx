@@ -3111,11 +3111,16 @@ const UserManagementPage = ({ role }) => {
       return all;
     };
 
-    Promise.all([
+    const { data: sessionData } = await supabase.auth.getSession();
+const accessToken = sessionData?.session?.access_token;
+
+Promise.all([
   supabase.from("profiles").select("id, name, username, role, branch_id, member_id, branches(name)").order("name"),
   fetchAllMembers(),
   supabase.from("branches").select("id, name").order("name"),
-  supabase.functions.invoke("list-users"),
+  supabase.functions.invoke("list-users", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  }),
 ]).then(([u, m, b, authUsers]) => {
   const emailMap = {};
   (authUsers?.data?.users || []).forEach(au => {
