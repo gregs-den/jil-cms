@@ -3489,7 +3489,7 @@ Promise.all([
           <label style={{ fontSize:12, fontWeight:600, color:C.slate }}>Role</label>
           <select value={form.role} onChange={e=>setForm({...form,role:e.target.value})}
             style={{ padding:"10px 14px", border:`1.5px solid ${C.fog}`, borderRadius:R.md, fontSize:14, outline:"none", background:C.white, color:C.ink }}>
-            <option value="member">Regular Member</option>
+            <option value="regular">Regular Member</option>
             <option value="admin">Admin</option>
             <option value="superadmin">Super Admin / Dev</option>
           </select>
