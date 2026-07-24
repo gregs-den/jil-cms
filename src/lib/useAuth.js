@@ -42,20 +42,18 @@ export function useAuth() {
   const loginWithEmail = async (username, password) => {
   setError(null);
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('name')
-    .eq('username', username.trim())  // ← eq instead of ilike
-    .maybeSingle();
+  // Look up the actual email for this username via edge function
+  const { data: lookupData, error: lookupError } = await supabase.functions.invoke("get-login-email", {
+    body: { username: username.trim() },
+  });
 
-  
-  if (profileError || !profile) {
+  if (lookupError || lookupData?.error) {
     setError("Username not found.");
     return { ok: false, error: "Username not found." };
   }
 
   const { data, error: signInError } = await supabase.auth.signInWithPassword({
-    email: profile.name,
+    email: lookupData.email,
     password,
   });
 
@@ -67,7 +65,7 @@ export function useAuth() {
   await loadProfile(data.user);
   await supabase.from("audit_logs").insert([{
     user_id: data.user.id,
-    user_name: profile.name,
+    user_name: username.trim(),
     action: "login",
     details: "Signed in",
     entity: "user",
@@ -79,10 +77,10 @@ export function useAuth() {
   const logout = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const { data: profile } = await supabase.from("profiles").select("name").eq("id", user.id).maybeSingle();
+      const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle();
       await supabase.from("audit_logs").insert([{
         user_id: user.id,
-        user_name: profile?.name || user.email || "Unknown",
+        user_name: profile?.username || user.email || "Unknown",
         action: "logout",
         details: "Signed out",
         entity: "user",
