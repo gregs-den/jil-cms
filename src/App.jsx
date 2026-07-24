@@ -1061,10 +1061,10 @@ const logAction = async (action, details, entity, entityId) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return null;
     const user = session.user;
-    const { data: profile } = await supabase.from("profiles").select("name").eq("id", user.id).maybeSingle();
+    const { data: profile } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle();
     const { error } = await supabase.from("audit_logs").insert([{
       user_id: user.id,
-      user_name: profile?.name || user.email || "Unknown",
+      user_name: profile?.username || user.email || "Unknown",
       action,
       details: details || null,
       entity: entity || null,
@@ -3115,7 +3115,7 @@ const UserManagementPage = ({ role }) => {
 const accessToken = sessionData?.session?.access_token;
 
 Promise.all([
-  supabase.from("profiles").select("id, name, username, role, branch_id, member_id, branches(name)").order("name"),
+  supabase.from("profiles").select("id, username, role, branch_id, member_id, members(name) branches(name)").order("username"),
   fetchAllMembers(),
   supabase.from("branches").select("id, name").order("name"),
   supabase.functions.invoke("list-users", {
