@@ -3092,7 +3092,7 @@ const UserManagementPage = ({ role }) => {
   }
 };
 
-  useEffect(() => {
+useEffect(() => {
     const fetchAllMembers = async () => {
       let all = [];
       let from = 0;
@@ -3111,34 +3111,38 @@ const UserManagementPage = ({ role }) => {
       return all;
     };
 
-    const { data: sessionData } = await supabase.auth.getSession();
-const accessToken = sessionData?.session?.access_token;
+    const loadAll = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
 
-Promise.all([
-  supabase.from("profiles").select("id, username, role, branch_id, member_id, members(name) branches(name)").order("username"),
-  fetchAllMembers(),
-  supabase.from("branches").select("id, name").order("name"),
-  supabase.functions.invoke("list-users", {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  }),
-]).then(([u, m, b, authUsers]) => {
-  const emailMap = {};
-  (authUsers?.data?.users || []).forEach(au => {
-    emailMap[au.id] = au.email;
-  });
+      const [u, m, b, authUsers] = await Promise.all([
+        supabase.from("profiles").select("id, username, role, branch_id, member_id, members(name), branches(name)").order("username"),
+        fetchAllMembers(),
+        supabase.from("branches").select("id, name").order("name"),
+        supabase.functions.invoke("list-users", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+      ]);
 
-  const usersWithEmail = (u.data || []).map(profile => ({
-    ...profile,
-    email: emailMap[profile.id] || null,
-  }));
+      const emailMap = {};
+      (authUsers?.data?.users || []).forEach(au => {
+        emailMap[au.id] = au.email;
+      });
 
-  setUsers(usersWithEmail);
-  setMembers(m);
-  if (b.data) setBranches(b.data);
-  setLoading(false);
-});
+      const usersWithEmail = (u.data || []).map(profile => ({
+        ...profile,
+        email: emailMap[profile.id] || null,
+      }));
+
+      setUsers(usersWithEmail);
+      setMembers(m);
+      if (b.data) setBranches(b.data);
+      setLoading(false);
+    };
+
+    loadAll();
   }, []);
-
+  
   const openEdit = (u) => {
     setSelected(u);
     setForm({ name:u.name||"", username:u.username||"", password:"", role:u.role||"regular", branch_id:u.branch_id||"", member_id:u.member_id||"" });
