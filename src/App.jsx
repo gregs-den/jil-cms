@@ -3167,7 +3167,7 @@ useEffect(() => {
     setSaving(true);
     if (modal === "edit") {
       const { error } = await supabase.from("profiles").update({
-        name: form.name,
+        username: form.username,
         role: form.role,
         branch_id: form.branch_id || null,
         member_id: form.member_id || null,
