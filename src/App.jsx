@@ -3483,9 +3483,9 @@ useEffect(() => {
           <Inp label="Full Name" value={form.name} onChange={v=>setForm({...form,name:v})} placeholder="Juan dela Cruz" required/>
         )}
         <Inp label="Email Address" value={form.email} onChange={v=>setForm({...form,email:v})} placeholder="juan@example.com" required/>
-         {modal==="edit" && (
+         
         <Inp label="Username" value={form.username} onChange={v=>setForm({...form,username:v})} placeholder="juandelacruz" required/>
-         )}
+         
         {modal==="invite" && (
           <Inp label="Password" type="password" value={form.password} onChange={v=>setForm({...form,password:v})} placeholder="At least 6 characters" required/>
         )}
