@@ -3081,8 +3081,10 @@ const UserManagementPage = ({ role }) => {
     if (error || data?.error) {
       alert("Failed: " + (data?.error || error.message));
     } else {
-      alert(`Password updated for ${resetModalUser.name || resetModalUser.email}`);
+      setToast({ msg:`Password updated for ${resetModalUser?.members?.name || resetModalUser?.email}`, type:"success" });
       setResetModalUser(null);
+      setNewPassword("");
+      setConfirmPassword("");
     }
   } catch (err) {
     console.error("Failed to reset password:", err);
