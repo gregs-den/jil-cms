@@ -3194,6 +3194,7 @@ useEffect(() => {
           role: form.role,
           branch_id: form.branch_id || null,
           member_id: form.member_id || null,
+          member_name: members.find(m => m.id === form.member_id)?.name || "",
         },
       });
       if (error || data?.error) {
@@ -3372,84 +3373,84 @@ useEffect(() => {
         </div>
       ) : (
         /* ── DESKTOP: Table ── */
-        <Card style={{ padding:0, overflow:"hidden" }}>
-          <div style={{ overflowX:"auto" }}>
-            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
-              <thead>
-                <tr style={{ background:C.fog }}>
-                  {["User","Username","Role","Branch","Linked Member","Actions"].map(h=>(
-                    <th key={h} style={{ textAlign:"left", padding:"10px 16px", color:C.slate, fontWeight:600, fontSize:11, textTransform:"uppercase", letterSpacing:.4, whiteSpace:"nowrap" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr><td colSpan={6} style={{ padding:"28px 16px", textAlign:"center", color:C.mist }}>Loading…</td></tr>
-                ) : filtered.length === 0 ? (
-                  <tr><td colSpan={6} style={{ padding:"28px 16px", textAlign:"center", color:C.mist }}>No users found.</td></tr>
-                ) : filtered.map(u => {
-                  const linkedMember = members.find(m=>m.id===u.member_id);
-                  return (
-                    <tr key={u.id} style={{ borderTop:`1px solid ${C.fog}`, opacity:u.role==="deactivated"?.5:1 }}>
-                      <td style={{ padding:"12px 16px" }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                          <Av name={u.members?.name||u.email} size={34}/>
-                          <div>
-                            <div style={{ fontWeight:600, color:C.ink }}>{u.members?.name||"—"}</div>
-                            <div style={{ fontSize:11, color:C.mist }}>{u.email}</div>
+          <Card style={{ padding:0, overflow:"hidden" }}>
+            <div style={{ overflowX:"auto" }}>
+              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+                <thead>
+                  <tr style={{ background:C.fog }}>
+                    {["User","Username","Role","Branch","Linked Member","Actions"].map(h=>(
+                      <th key={h} style={{ textAlign:"left", padding:"10px 16px", color:C.slate, fontWeight:600, fontSize:11, textTransform:"uppercase", letterSpacing:.4, whiteSpace:"nowrap" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={6} style={{ padding:"28px 16px", textAlign:"center", color:C.mist }}>Loading…</td></tr>
+                  ) : filtered.length === 0 ? (
+                    <tr><td colSpan={6} style={{ padding:"28px 16px", textAlign:"center", color:C.mist }}>No users found.</td></tr>
+                  ) : filtered.map(u => {
+                    const linkedMember = members.find(m=>m.id===u.member_id);
+                    return (
+                      <tr key={u.id} style={{ borderTop:`1px solid ${C.fog}`, opacity:u.role==="deactivated"?.5:1 }}>
+                        <td style={{ padding:"12px 16px" }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                            <Av name={u.members?.name||u.email} size={34}/>
+                            <div>
+                              <div style={{ fontWeight:600, color:C.ink }}>{u.members?.name||"—"}</div>
+                              <div style={{ fontSize:11, color:C.mist }}>{u.email}</div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td style={{ padding:"12px 16px", color:C.slate, fontSize:12 }}>
-                        {u.username ? `${u.username}` : "—"}
-                      </td>
-                      {/* Inline role select */}
-                      <td style={{ padding:"12px 16px" }}>
-                        <select value={u.role} onChange={e=>updateRoleInline(u, e.target.value)}
-                          style={{ padding:"5px 10px", borderRadius:R.md, border:`1.5px solid ${ROLE_COLORS[u.role]||C.cloud}`, fontSize:12, outline:"none", background:`${ROLE_COLORS[u.role]||C.slate}12`, color:ROLE_COLORS[u.role]||C.slate, fontWeight:600, cursor:"pointer" }}>
-                          <option value="regular">Member</option>
-                          <option value="admin">Admin</option>
-                          <option value="superadmin">Dev / Super</option>
-                          <option value="deactivated">Deactivated</option>
-                        </select>
-                      </td>
-                      <td style={{ padding:"12px 16px", color:C.slate, fontSize:12 }}>{u.branches?.name||"—"}</td>
-                      <td style={{ padding:"12px 16px" }}>
-                        {linkedMember ? (
-                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                            <Ico.check size={12} color={C.green}/>
-                            <span style={{ fontSize:12, color:C.green, fontWeight:600 }}>{linkedMember.name}</span>
-                          </div>
-                        ) : (
-                          <span style={{ fontSize:12, color:C.mist }}>Not linked</span>
-                        )}
-                      </td>
-                      <td style={{ padding:"12px 16px" }}>
-                        <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                          <button onClick={()=>openEdit(u)} style={{ border:"none", background:C.blue3, borderRadius:R.sm, padding:"6px 10px", cursor:"pointer", fontSize:11, color:C.blue, fontWeight:600 }}>Edit</button>
-                          {canResetPassword && (
-                            <button 
-                              onClick={()=>openResetModal(u)} 
-                              style={{ border:"none", background:C.violet3, borderRadius:R.sm, padding:"6px 10px", cursor:"pointer", fontSize:11, color:C.violet, fontWeight:600 }}
-                            >
-                              Reset PW
-                            </button>
+                        </td>
+                        <td style={{ padding:"12px 16px", color:C.slate, fontSize:12 }}>
+                          {u.username ? `${u.username}` : "—"}
+                        </td>
+                        {/* Inline role select */}
+                        <td style={{ padding:"12px 16px" }}>
+                          <select value={u.role} onChange={e=>updateRoleInline(u, e.target.value)}
+                            style={{ padding:"5px 10px", borderRadius:R.md, border:`1.5px solid ${ROLE_COLORS[u.role]||C.cloud}`, fontSize:12, outline:"none", background:`${ROLE_COLORS[u.role]||C.slate}12`, color:ROLE_COLORS[u.role]||C.slate, fontWeight:600, cursor:"pointer" }}>
+                            <option value="regular">Member</option>
+                            <option value="admin">Admin</option>
+                            <option value="superadmin">Dev / Super</option>
+                            <option value="deactivated">Deactivated</option>
+                          </select>
+                        </td>
+                        <td style={{ padding:"12px 16px", color:C.slate, fontSize:12 }}>{u.branches?.name||"—"}</td>
+                        <td style={{ padding:"12px 16px" }}>
+                          {linkedMember ? (
+                            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                              <Ico.check size={12} color={C.green}/>
+                              <span style={{ fontSize:12, color:C.green, fontWeight:600 }}>{linkedMember.name}</span>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize:12, color:C.mist }}>Not linked</span>
                           )}
-                          {u.role==="deactivated"
-                            ? <button onClick={()=>reactivateUser(u)} style={{ border:"none", background:C.green3, borderRadius:R.sm, padding:"6px 10px", cursor:"pointer", fontSize:11, color:C.green, fontWeight:600 }}>Activate</button>
-                            : <button onClick={()=>deactivateUser(u)} style={{ border:"none", background:C.amber3, borderRadius:R.sm, padding:"6px 10px", cursor:"pointer", fontSize:11, color:C.amber, fontWeight:600 }}>Disable</button>
-                          }
-                          <button onClick={()=>deleteUser(u)} style={{ border:"none", background:C.rose3, borderRadius:R.sm, padding:"6px 10px", cursor:"pointer", fontSize:11, color:C.rose2, fontWeight:600 }}>Delete</button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
+                        </td>
+                        <td style={{ padding:"12px 16px" }}>
+                          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                            <button onClick={()=>openEdit(u)} style={{ border:"none", background:C.blue3, borderRadius:R.sm, padding:"6px 10px", cursor:"pointer", fontSize:11, color:C.blue, fontWeight:600 }}>Edit</button>
+                            {canResetPassword && (
+                              <button 
+                                onClick={()=>openResetModal(u)} 
+                                style={{ border:"none", background:C.violet3, borderRadius:R.sm, padding:"6px 10px", cursor:"pointer", fontSize:11, color:C.violet, fontWeight:600 }}
+                              >
+                                Reset PW
+                              </button>
+                            )}
+                            {u.role==="deactivated"
+                              ? <button onClick={()=>reactivateUser(u)} style={{ border:"none", background:C.green3, borderRadius:R.sm, padding:"6px 10px", cursor:"pointer", fontSize:11, color:C.green, fontWeight:600 }}>Activate</button>
+                              : <button onClick={()=>deactivateUser(u)} style={{ border:"none", background:C.amber3, borderRadius:R.sm, padding:"6px 10px", cursor:"pointer", fontSize:11, color:C.amber, fontWeight:600 }}>Disable</button>
+                            }
+                            <button onClick={()=>deleteUser(u)} style={{ border:"none", background:C.rose3, borderRadius:R.sm, padding:"6px 10px", cursor:"pointer", fontSize:11, color:C.rose2, fontWeight:600 }}>Delete</button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
 
       {/* Edit / Invite Modal */}
       <Modal open={!!modal} onClose={()=>setModal(null)} title={modal==="invite"?"Invite New User":"Edit User"}>
