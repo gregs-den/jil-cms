@@ -3144,10 +3144,18 @@ useEffect(() => {
   }, []);
 
   const openEdit = (u) => {
-    setSelected(u);
-    setForm({ name:u.members?.name||"", username:u.username||"", password:"", role:u.role||"regular", branch_id:u.branch_id||"", member_id:u.member_id||"" });
-    setModal("edit");
-  };
+  setSelected(u);
+  setForm({ 
+    name: u.members?.name || "", 
+    email: u.email || "",
+    username: u.username || "", 
+    password: "", 
+    role: u.role || "regular", 
+    branch_id: u.branch_id || "", 
+    member_id: u.member_id || "" 
+  });
+  setModal("edit");
+};
 
   const openInvite = () => {
     setSelected(null);
