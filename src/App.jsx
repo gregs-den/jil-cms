@@ -3145,7 +3145,7 @@ useEffect(() => {
 
   const openEdit = (u) => {
     setSelected(u);
-    setForm({ name:u.members.name||"", username:u.username||"", password:"", role:u.role||"regular", branch_id:u.branch_id||"", member_id:u.member_id||"" });
+    setForm({ name:u.members?.name||"", username:u.username||"", password:"", role:u.role||"regular", branch_id:u.branch_id||"", member_id:u.member_id||"" });
     setModal("edit");
   };
 
@@ -3213,37 +3213,37 @@ useEffect(() => {
   };
 
   const deactivateUser = async (u) => {
-    if (!confirm(`Deactivate ${u.members.name}? They won't be able to log in.`)) return;
+    if (!confirm(`Deactivate ${u.members?.name}? They won't be able to log in.`)) return;
     const { error } = await supabase.from("profiles").update({ role:"deactivated" }).eq("id", u.id);
     if (error) { setToast({ msg:"Failed: " + error.message, type:"error" }); return; }
     setUsers(prev => prev.map(x => x.id===u.id ? {...x, role:"deactivated"} : x));
-    setToast({ msg:`${u.members.name} deactivated`, type:"warn" });
-    logAction("user_deactivated", `Deactivated ${u.members.name}`, "user", u.id);
+    setToast({ msg:`${u.members?.name} deactivated`, type:"warn" });
+    logAction("user_deactivated", `Deactivated ${u.members?.name}`, "user", u.id);
   };
 
   const reactivateUser = async (u) => {
     const { error } = await supabase.from("profiles").update({ role:"regular" }).eq("id", u.id);
     if (error) { setToast({ msg:"Failed: " + error.message, type:"error" }); return; }
     setUsers(prev => prev.map(x => x.id===u.id ? {...x, role:"regular"} : x));
-    setToast({ msg:`${u.members.name} re-activated`, type:"success" });
-    logAction("user_activated", `Activated ${u.members.name}`, "user", u.id);
+    setToast({ msg:`${u.members?.name} re-activated`, type:"success" });
+    logAction("user_activated", `Activated ${u.members?.name}`, "user", u.id);
   };
 
   const deleteUser = async (u) => {
-    if (!confirm(`Permanently delete ${u.members.name}? This cannot be undone.`)) return;
+    if (!confirm(`Permanently delete ${u.members?.name}? This cannot be undone.`)) return;
     const { error } = await supabase.from("profiles").delete().eq("id", u.id);
     if (error) { setToast({ msg:"Failed: " + error.message, type:"error" }); return; }
     setUsers(prev => prev.filter(x => x.id !== u.id));
-    setToast({ msg:`${u.members.name} deleted`, type:"error" });
-    logAction("user_deleted", `Deleted ${u.members.name}`, "user", u.id);
+    setToast({ msg:`${u.members?.name} deleted`, type:"error" });
+    logAction("user_deleted", `Deleted ${u.members?.name}`, "user", u.id);
   };
 
   const updateRoleInline = async (u, newRole) => {
     const { error } = await supabase.from("profiles").update({ role: newRole }).eq("id", u.id);
     if (error) { setToast({ msg:"Failed: " + error.message, type:"error" }); return; }
     setUsers(prev => prev.map(x => x.id===u.id ? {...x, role:newRole} : x));
-    setToast({ msg:`${u.members.name} → ${newRole}`, type:"success" });
-    logAction("user_role_changed", `${u.members.name} → ${newRole}`, "user", u.id);
+    setToast({ msg:`${u.members?.name} → ${newRole}`, type:"success" });
+    logAction("user_role_changed", `${u.members?.name} → ${newRole}`, "user", u.id);
   };
 
   const resetPassword = async (u) => {
@@ -3265,7 +3265,7 @@ useEffect(() => {
 
   const filtered = users.filter(u => {
     const matchSearch =
-      u.members.name?.toLowerCase().includes(search.toLowerCase()) ||
+      u.members?.name?.toLowerCase().includes(search.toLowerCase()) ||
       u.email?.toLowerCase().includes(search.toLowerCase());
     const matchRole = filterRole === "all" || u.role === filterRole;
     return matchSearch && matchRole;
@@ -3324,9 +3324,9 @@ useEffect(() => {
             return (
               <Card key={u.id} style={{ opacity: u.role==="deactivated"?.5:1 }}>
                 <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
-                  <Av name={u.members.name||u.email} size={40}/>
+                  <Av name={u.members?.name||u.email} size={40}/>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:700, color:C.ink, fontSize:14 }}>{u.members.name||"—"}</div>
+                    <div style={{ fontWeight:700, color:C.ink, fontSize:14 }}>{u.members?.name||"—"}</div>
                     <div style={{ fontSize:11, color:C.mist, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{u.email}</div>
                     {u.username && <div style={{ fontSize:11, color:C.blue, fontWeight:600 }}>@{u.username}</div>}
                   </div>
@@ -3393,9 +3393,9 @@ useEffect(() => {
                     <tr key={u.id} style={{ borderTop:`1px solid ${C.fog}`, opacity:u.role==="deactivated"?.5:1 }}>
                       <td style={{ padding:"12px 16px" }}>
                         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                          <Av name={u.members.name||u.email} size={34}/>
+                          <Av name={u.members?.name||u.email} size={34}/>
                           <div>
-                            <div style={{ fontWeight:600, color:C.ink }}>{u.members.name||"—"}</div>
+                            <div style={{ fontWeight:600, color:C.ink }}>{u.members?.name||"—"}</div>
                             <div style={{ fontSize:11, color:C.mist }}>{u.email}</div>
                           </div>
                         </div>
