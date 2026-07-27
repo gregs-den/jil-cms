@@ -160,7 +160,7 @@ useEffect(() => {
       case "myqr":          return <MyQRPage        user={user}/>;
       case "scanner":       return <ScannerPage     role={role}/>;
       case "prayer":        return <PrayerPage user={user} role={role}/>;
-      case "settings":      return <SettingsPage role={role} C={C}/>;
+      case "settings":      return <SettingsPage role={role}/>;
       default:              return <Dashboard       role={role} user={user}/>;
     }
   };
