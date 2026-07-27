@@ -11,6 +11,7 @@ import jsQR from "jsqr";
 import PrayerPage from './pages/PrayerPage';
 import AnnouncementPage from './pages/AnnouncementPage';
 import SettingsPage from './pages/SettingsPage';
+import RFIDPage from "./pages/RFIDPage";
 
 /* ════════════════════════════════════════════════════════════
    BRANCH HIERARCHY & ACCESS CONTROL
@@ -159,6 +160,7 @@ useEffect(() => {
       case "qr":            return <QRGeneratorPage role={role} user={user}/>;
       case "myqr":          return <MyQRPage        user={user}/>;
       case "scanner":       return <ScannerPage     role={role}/>;
+      case "rfid":          return <RFIDPage role={role} user={user}/>;
       case "prayer":        return <PrayerPage user={user} role={role}/>;
       case "settings":      return <SettingsPage role={role}/>;
       default:              return <Dashboard       role={role} user={user}/>;
@@ -325,6 +327,12 @@ const Ico = {
   camera:     (p)=><SVG {...p}><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h3l2-3h8l2 3h3a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></SVG>,
   scan:       (p)=><SVG {...p}><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/><line x1="3" y1="12" x2="21" y2="12"/></SVG>,
   idcard:     (p)=><SVG {...p}><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="11" r="2"/><path d="M5 17c0-1.5 1.5-2.5 3-2.5s3 1 3 2.5"/><line x1="13" y1="9" x2="19" y2="9"/><line x1="13" y1="13" x2="19" y2="13"/></SVG>,
+  rfid: ({ size=16, color="currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="7" width="20" height="10" rx="2"/>
+    <path d="M6 11h.01M6 13h.01M10 11h4M10 13h4"/>
+  </svg>
+),
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -820,6 +828,7 @@ const MENUS = {
   {id:"announcements",  label:"Announcements",I:Ico.bell},   
   {id:"qr",             label:"QR Generator", I:Ico.qr},
   {id:"scanner",        label:"QR Scanner",   I:Ico.scan},
+  { id:"rfid",          label:"RFID", icon:Ico.rfid },  
   {id:"prayer",         label:"Prayer Requests", I:Ico.prayer},
  ],
 superadmin: [
@@ -831,6 +840,7 @@ superadmin: [
   {id:"announcements",  label:"Announcements",I:Ico.bell},   
   {id:"qr",             label:"QR Generator", I:Ico.qr},
   {id:"scanner",        label:"QR Scanner",   I:Ico.scan},
+  { id:"rfid",          label:"RFID", icon:Ico.rfid },
   {id:"prayer",         label:"Prayer Requests", I:Ico.prayer},
   {id:"branches",       label:"Branches",     I:Ico.branch},
   {id:"settings",       label:"Settings",     I:Ico.settings},
