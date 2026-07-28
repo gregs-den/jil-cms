@@ -828,7 +828,7 @@ const MENUS = {
   {id:"announcements",  label:"Announcements",I:Ico.bell},   
   {id:"qr",             label:"QR Generator", I:Ico.qr},
   {id:"scanner",        label:"QR Scanner",   I:Ico.scan},
-  { id:"rfid",          label:"RFID", icon:Ico.rfid },  
+  {id:"rfid",           label:"RFID",         I:Ico.rfid },  
   {id:"prayer",         label:"Prayer Requests", I:Ico.prayer},
  ],
 superadmin: [
@@ -840,7 +840,7 @@ superadmin: [
   {id:"announcements",  label:"Announcements",I:Ico.bell},   
   {id:"qr",             label:"QR Generator", I:Ico.qr},
   {id:"scanner",        label:"QR Scanner",   I:Ico.scan},
-  { id:"rfid",          label:"RFID", icon:Ico.rfid },
+  {id:"rfid",           label:"RFID",         I:Ico.rfid },
   {id:"prayer",         label:"Prayer Requests", I:Ico.prayer},
   {id:"branches",       label:"Branches",     I:Ico.branch},
   {id:"settings",       label:"Settings",     I:Ico.settings},
