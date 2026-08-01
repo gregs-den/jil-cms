@@ -11,7 +11,7 @@ const C = {
 };
 const R = { md: "14px", lg: "18px", xl: "24px", xxl: "32px", full: "9999px" };
 
-export default function Login({ onLogin, error }) {
+export default function Login({ onLogin, error, logo, bg }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -45,27 +45,26 @@ export default function Login({ onLogin, error }) {
     >
       <div style={{ maxWidth: 400, width: "100%" }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: R.xxl,
-              background: "linear-gradient(135deg,#1D4ED8,#7C3AED)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 14px",
-            }}
-          >
+        <div style={{
+          width: 64, height: 64, borderRadius: R.xxl,
+          background: "linear-gradient(135deg,#1D4ED8,#7C3AED)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          margin: "0 auto 14px", overflow: "hidden",
+        }}>
+          {logo ? (
+            <img src={logo} alt="Church Logo"
+              style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
+          ) : (
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2l1.5 5.5H19l-4.5 3 1.5 5.5L12 13l-4 3 1.5-5.5L5 7.5h5.5z" />
             </svg>
-          </div>
-          <h1 style={{ color: "#fff", fontSize: 24, fontWeight: 800, margin: "0 0 4px", letterSpacing: -0.5 }}>
-            JIL Pinamalayan
-          </h1>
-          <p style={{ color: "#475569", fontSize: 13, margin: 0 }}>Church Management System</p>
+          )}
         </div>
+        <h1 style={{ color: "#fff", fontSize: 24, fontWeight: 800, margin: "0 0 4px", letterSpacing: -0.5 }}>
+          JIL Pinamalayan
+        </h1>
+        <p style={{ color: "#475569", fontSize: 13, margin: 0 }}>Church Management System</p>
+      </div>
 
         <form
           onSubmit={handleSubmit}
