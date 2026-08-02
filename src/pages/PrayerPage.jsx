@@ -285,6 +285,10 @@ function PrayerDetailModal({ open, onClose, requestId, user, onSuccess }) {
   };
 
   const handlePray = async () => {
+    console.log("handlePray called");
+    console.log("createNotification:", createNotification);
+    console.log("request.member_id:", request?.member_id);
+    console.log("user.memberId:", user?.memberId);
     if (!user?.id) return;
     setSending(true);
 
@@ -307,8 +311,10 @@ function PrayerDetailModal({ open, onClose, requestId, user, onSuccess }) {
           );
         }
 
+      const { data: current } = await supabase.from("prayer_requests")
+        .select("prayer_count").eq("id", requestId).single();
       await supabase.from("prayer_requests")
-        .update({ prayer_count: (request?.prayer_count || 0) + 1 })
+        .update({ prayer_count: (current?.prayer_count || 0) + 1 })
         .eq("id", requestId);
       
       setHasPrayed(true);
