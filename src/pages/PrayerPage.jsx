@@ -296,6 +296,17 @@ function PrayerDetailModal({ open, onClose, requestId, user, onSuccess }) {
 
     if (!prayErr) {
       // Update prayer count
+
+      // Notify the prayer request owner
+        if (request?.member_id && request.member_id !== user?.memberId) {
+          await createNotification?.(
+            request.member_id,
+            "Someone prayed for you! 🙏",
+            `${user?.name || "A member"} prayed for "${request?.title}"`,
+            "prayer_prayed"
+          );
+        }
+
       await supabase.from("prayer_requests")
         .update({ prayer_count: (request?.prayer_count || 0) + 1 })
         .eq("id", requestId);
@@ -441,7 +452,7 @@ function PrayerDetailModal({ open, onClose, requestId, user, onSuccess }) {
 // ════════════════════════════════════════════════════════════
 //  MAIN PAGE
 // ════════════════════════════════════════════════════════════
-export default function PrayerPage({ user, role }) {
+export default function PrayerPage({ user, role, createNotification }) {
   const mob = useIsMobile();
 
   const [requests, setRequests] = useState([]);
@@ -600,7 +611,7 @@ export default function PrayerPage({ user, role }) {
 
       {/* Admin: Pending approvals section */}
       {(role === "admin" || role === "superadmin") && (
-  <PendingApprovalsSection user={user} role={role} onApprovalChange={fetchRequests}/>
+        <PendingApprovalsSection user={user} role={role} onApprovalChange={fetchRequests} createNotification={createNotification}/>
       )}
     </div>
   );
@@ -609,7 +620,7 @@ export default function PrayerPage({ user, role }) {
 // ════════════════════════════════════════════════════════════
 //  ADMIN: PENDING APPROVALS
 // ════════════════════════════════════════════════════════════
-function PendingApprovalsSection({ onApprovalChange, user, role }) {
+function PendingApprovalsSection({ onApprovalChange, user, role, createNotification }) {
   const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -633,7 +644,16 @@ function PendingApprovalsSection({ onApprovalChange, user, role }) {
   };
 
   const handleApprove = async (id) => {
+    const req = pending.find(p => p.id === id);
     await supabase.from("prayer_requests").update({ status: "approved" }).eq("id", id);
+    if (req?.member_id) {
+      await createNotification?.(
+        req.member_id,
+        "Your prayer request was approved ✅",
+        `"${req.title}" is now visible to the community`,
+        "prayer_approved"
+      );
+    }
     loadPending();
     onApprovalChange?.();
   };
