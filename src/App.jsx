@@ -7,6 +7,7 @@ import QRCode from "qrcode";
 import { supabase } from "./lib/supabaseClient";
 import MyAttendancePage from './pages/MyAttendancePage';
 import AttendancePage from './pages/AttendancePage';
+import ReportsPage from "./pages/ReportsPage";
 import jsQR from "jsqr";
 import PrayerPage from './pages/PrayerPage';
 import AnnouncementPage from './pages/AnnouncementPage';
@@ -154,7 +155,7 @@ useEffect(() => {
         ? <MyAttendancePage />
         : <AttendancePage role={role} user={user}/>;
       case "finance":       return <FinancePage role={role} user={user}/>;
-      case "reports":       return role === "regular" ? <Dashboard role={role} user={user}/> : <ReportsPage role={role}/>;
+      case "reports":       return <ReportsPage role={role} user={user}/>;
       case "members":       return <MembersPage     role={role} user={user}/>;
       case "announcements": return <AnnouncementPage bg="" user={user} role={role}/>;
       case "qr":            return <QRGeneratorPage role={role} user={user}/>;
