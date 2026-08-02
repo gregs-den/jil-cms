@@ -162,7 +162,7 @@ useEffect(() => {
       case "myqr":          return <MyQRPage        user={user}/>;
       case "scanner":       return <ScannerPage     role={role}/>;
       case "rfid":          return <RFIDPage role={role} user={user}/>;
-      case "prayer":        return <PrayerPage user={user} role={role}/>;
+      case "prayer":        return <PrayerPage role={role} user={user} createNotification={createNotification}/>;
       case "settings":      return <SettingsPage role={role}/>;
       default:              return <Dashboard       role={role} user={user}/>;
     }
