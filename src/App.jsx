@@ -939,11 +939,56 @@ const Topbar = ({ role, page, user, collapsed, setCollapsed, mobile, setShowMob 
   const menu = MENUS[role]||[];
   const label = menu.find(m=>m.id===page)?.label||"Dashboard";
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [bellOpen, setBellOpen] = useState(false);
   const [pwModal, setPwModal] = useState(false);
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user?.memberId) return;
+    fetchNotifications();
+
+    // Real-time subscription
+    const sub = supabase.channel("notifications")
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "notifications",
+        filter: `member_id=eq.${user.memberId}`
+      }, () => fetchNotifications())
+      .subscribe();
+
+    return () => supabase.removeChannel(sub);
+  }, [user?.memberId]);
+
+  const fetchNotifications = async () => {
+    const { data } = await supabase.from("notifications")
+      .select("*")
+      .eq("member_id", user.memberId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (data) {
+      setNotifications(data);
+      setUnreadCount(data.filter(n => !n.is_read).length);
+    }
+  };
+
+  const markAllRead = async () => {
+    await supabase.from("notifications")
+      .update({ is_read: true })
+      .eq("member_id", user.memberId)
+      .eq("is_read", false);
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+  };
+
+  const markRead = async (id) => {
+    await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
 
   const changePassword = async () => {
     if (!newPw || newPw.length < 6) {
@@ -967,8 +1012,18 @@ const Topbar = ({ role, page, user, collapsed, setCollapsed, mobile, setShowMob 
     setSaving(false);
   };
 
+  const notifIcon = (type) => {
+    if (type === "prayer_approved") return "✅";
+    if (type === "prayer_answered") return "🙏";
+    if (type === "prayer_prayed") return "❤️";
+    if (type === "announcement") return "📢";
+    if (type === "event") return "📅";
+    return "🔔";
+  };
+
   return (
-    <div style={{ background:C.white, borderBottom:`1px solid ${C.fog}`, padding:"0 20px", height:54, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, gap:12 }}>
+    <div style={{ background:C.white, borderBottom:`1px solid ${C.fog}`, padding:"0 20px", height:54,
+      display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, gap:12 }}>
       {toast && <Toast msg={toast.msg} type={toast.type} onDone={()=>setToast(null)}/>}
 
       <div style={{ display:"flex", alignItems:"center", gap:12 }}>
@@ -981,17 +1036,90 @@ const Topbar = ({ role, page, user, collapsed, setCollapsed, mobile, setShowMob 
 
       <div style={{ display:"flex", alignItems:"center", gap:12 }}>
         {(role==="admin"||role==="superadmin") && (
-          <button style={{ display:"flex",alignItems:"center",gap:5, padding:"5px 12px", borderRadius:R.full, background:C.violet3, border:"none", cursor:"pointer", color:C.violet, fontWeight:600, fontSize:12 }}>
+          <button style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px",
+            borderRadius:R.full, background:C.violet3, border:"none", cursor:"pointer",
+            color:C.violet, fontWeight:600, fontSize:12 }}>
             <Ico.eye size={13} color={C.violet}/> Impersonate
           </button>
         )}
-        <button style={{ border:"none", background:"transparent", cursor:"pointer", display:"flex" }}>
-          <Ico.bell size={18} color={C.slate}/>
-        </button>
+
+        {/* Bell Notification */}
+        <div style={{ position:"relative" }}>
+          <button onClick={()=>{ setBellOpen(v=>!v); setDropdownOpen(false); }}
+            style={{ border:"none", background:"transparent", cursor:"pointer",
+              display:"flex", position:"relative", padding:4 }}>
+            <Ico.bell size={18} color={bellOpen ? C.blue : C.slate}/>
+            {unreadCount > 0 && (
+              <span style={{ position:"absolute", top:-4, right:-4, background:C.rose2,
+                color:C.white, borderRadius:R.full, fontSize:10, fontWeight:700,
+                minWidth:16, height:16, display:"flex", alignItems:"center",
+                justifyContent:"center", padding:"0 4px" }}>
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {bellOpen && (
+            <>
+              <div onClick={()=>setBellOpen(false)} style={{ position:"fixed", inset:0, zIndex:50 }}/>
+              <div style={{ position:"absolute", top:"calc(100% + 8px)", right:0, background:C.white,
+                borderRadius:R.lg, boxShadow:SH.md, border:`1px solid ${C.fog}`,
+                width:320, maxHeight:420, zIndex:100, overflow:"hidden",
+                display:"flex", flexDirection:"column" }}>
+                <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.fog}`,
+                  display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <div style={{ fontWeight:700, fontSize:13, color:C.ink }}>
+                    Notifications {unreadCount > 0 && `(${unreadCount})`}
+                  </div>
+                  {unreadCount > 0 && (
+                    <button onClick={markAllRead}
+                      style={{ border:"none", background:"transparent", cursor:"pointer",
+                        fontSize:11, color:C.blue, fontWeight:600 }}>
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                <div style={{ overflowY:"auto", flex:1 }}>
+                  {notifications.length === 0 ? (
+                    <div style={{ padding:"28px 16px", textAlign:"center", color:C.mist, fontSize:13 }}>
+                      No notifications yet
+                    </div>
+                  ) : notifications.map(n => (
+                    <div key={n.id} onClick={()=>markRead(n.id)}
+                      style={{ padding:"12px 16px", borderBottom:`1px solid ${C.fog}`,
+                        background: n.is_read ? C.white : C.blue3,
+                        cursor:"pointer", transition:"background .15s" }}>
+                      <div style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
+                        <span style={{ fontSize:18, flexShrink:0 }}>{notifIcon(n.type)}</span>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontWeight:n.is_read?500:700, fontSize:13, color:C.ink,
+                            marginBottom:2 }}>{n.title}</div>
+                          {n.message && (
+                            <div style={{ fontSize:11, color:C.slate, lineHeight:1.4 }}>{n.message}</div>
+                          )}
+                          <div style={{ fontSize:10, color:C.mist, marginTop:4 }}>
+                            {new Date(n.created_at).toLocaleString("en-PH", {
+                              month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"
+                            })}
+                          </div>
+                        </div>
+                        {!n.is_read && (
+                          <div style={{ width:8, height:8, borderRadius:"50%",
+                            background:C.blue, flexShrink:0, marginTop:4 }}/>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Avatar dropdown */}
         <div style={{ position:"relative" }}>
-          <button onClick={()=>setDropdownOpen(v=>!v)} style={{ border:"none", background:"transparent", cursor:"pointer", padding:0 }}>
+          <button onClick={()=>{ setDropdownOpen(v=>!v); setBellOpen(false); }}
+            style={{ border:"none", background:"transparent", cursor:"pointer", padding:0 }}>
             <Av name={user.name} size={32}/>
           </button>
 
@@ -999,14 +1127,16 @@ const Topbar = ({ role, page, user, collapsed, setCollapsed, mobile, setShowMob 
             <>
               <div onClick={()=>setDropdownOpen(false)} style={{ position:"fixed", inset:0, zIndex:50 }}/>
               <div style={{ position:"absolute", top:"calc(100% + 8px)", right:0, background:C.white,
-                borderRadius:R.lg, boxShadow:SH.md, border:`1px solid ${C.fog}`, minWidth:180, zIndex:100, overflow:"hidden" }}>
+                borderRadius:R.lg, boxShadow:SH.md, border:`1px solid ${C.fog}`,
+                minWidth:180, zIndex:100, overflow:"hidden" }}>
                 <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.fog}` }}>
                   <div style={{ fontWeight:700, fontSize:13, color:C.ink }}>{user.name}</div>
                   <div style={{ fontSize:11, color:C.mist }}>{role}</div>
                 </div>
                 <button onClick={()=>{ setPwModal(true); setDropdownOpen(false); }}
                   style={{ display:"flex", alignItems:"center", gap:8, width:"100%", padding:"10px 16px",
-                    border:"none", background:"transparent", cursor:"pointer", fontSize:13, color:C.ink, textAlign:"left" }}>
+                    border:"none", background:"transparent", cursor:"pointer", fontSize:13,
+                    color:C.ink, textAlign:"left" }}>
                   🔒 Change Password
                 </button>
               </div>
@@ -1084,6 +1214,16 @@ const logAction = async (action, details, entity, entityId) => {
   } catch (err) {
     return err;
   }
+};
+
+const createNotification = async (memberId, title, message, type) => {
+  if (!memberId) return;
+  await supabase.from("notifications").insert([{
+    member_id: memberId,
+    title,
+    message,
+    type,
+  }]);
 };
 
 const REACTION_EMOJIS = ["🙏","❤️","🔥","👏","😊","🎉"];
