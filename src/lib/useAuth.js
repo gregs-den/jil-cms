@@ -31,6 +31,7 @@ export function useAuth() {
         .eq('id', profile.member_id)
         .maybeSingle();
       profile.memberName = member?.name || profile.username;
+      console.log("memberName set to:", profile.memberName);
     } else {
       profile.memberName = profile.username;
     }
