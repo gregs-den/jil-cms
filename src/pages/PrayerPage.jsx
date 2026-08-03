@@ -510,9 +510,9 @@ export default function PrayerPage({ user, role, createNotification }) {
       <NewPrayerModal open={showNewPrayer} onClose={()=>setShowNewPrayer(false)}
         user={user} onSuccess={fetchRequests}/>
       <PrayerDetailModal
-        open={!!selectedId}
-        onClose={()=>setSelectedId(null)}
-        requestId={selectedId}
+        open={!!selectedRequest}
+        onClose={()=>setSelectedRequest(null)}
+        requestId={selectedRequest}
         user={user}
         onSuccess={fetchRequests}
         createNotification={createNotification}
