@@ -244,7 +244,7 @@ function NewPrayerModal({ open, onClose, user, onSuccess }) {
 // ════════════════════════════════════════════════════════════
 //  PRAYER REQUEST DETAIL MODAL
 // ════════════════════════════════════════════════════════════
-function PrayerDetailModal({ open, onClose, requestId, user, onSuccess }) {
+function PrayerDetailModal({ open, onClose, requestId, user, onSuccess, createNotification }) {
   const [request, setRequest] = useState(null);
   const [responses, setResponses] = useState([]);
   const [newMessage, setNewMessage] = useState("");
@@ -284,47 +284,47 @@ function PrayerDetailModal({ open, onClose, requestId, user, onSuccess }) {
     setLoading(false);
   };
 
-  const handlePray = async () => {
-    console.log("handlePray called");
-    console.log("createNotification:", createNotification);
-    console.log("request.member_id:", request?.member_id);
-    console.log("user.memberId:", user?.memberId);
-    if (!user?.id) return;
-    setSending(true);
+    const handlePray = async () => {
+      console.log("handlePray called");
+      console.log("createNotification:", createNotification);
+      console.log("request.member_id:", request?.member_id);
+      console.log("user.memberId:", user?.memberId);
+      if (!user?.id) return;
+      setSending(true);
 
-    // Insert prayer record
-    const { error: prayErr } = await supabase.from("prayer_prays").insert({
-      prayer_request_id: requestId,
-      member_id: user.memberId,
-    });
+      // Insert prayer record
+      const { error: prayErr } = await supabase.from("prayer_prays").insert({
+        prayer_request_id: requestId,
+        member_id: user.memberId,
+      });
 
-    if (!prayErr) {
-      // Update prayer count
+      if (!prayErr) {
+        // Update prayer count
 
-      // Notify the prayer request owner
-        if (request?.member_id && request.member_id !== user?.memberId) {
-          await createNotification?.(
-            request.member_id,
-            "Someone prayed for you! 🙏",
-            `${user?.name || "A member"} prayed for "${request?.title}"`,
-            "prayer_prayed"
-          );
-        }
+        // Notify the prayer request owner
+          if (request?.member_id && request.member_id !== user?.memberId) {
+            await createNotification?.(
+              request.member_id,
+              "Someone prayed for you! 🙏",
+              `${user?.name || "A member"} prayed for "${request?.title}"`,
+              "prayer_prayed"
+            );
+          }
 
-      const { data: current } = await supabase.from("prayer_requests")
-        .select("prayer_count").eq("id", requestId).single();
-      await supabase.from("prayer_requests")
-        .update({ prayer_count: (current?.prayer_count || 0) + 1 })
-        .eq("id", requestId);
-      
-      setHasPrayed(true);
-      setRequest({ ...request, prayer_count: (request?.prayer_count || 0) + 1 });
-    } else {
-        console.error("Pray error:", prayErr);  // ← ADD THIS TO SEE THE ERROR
-    }
+        const { data: current } = await supabase.from("prayer_requests")
+          .select("prayer_count").eq("id", requestId).single();
+        await supabase.from("prayer_requests")
+          .update({ prayer_count: (current?.prayer_count || 0) + 1 })
+          .eq("id", requestId);
+        
+        setHasPrayed(true);
+        setRequest({ ...request, prayer_count: (request?.prayer_count || 0) + 1 });
+      } else {
+          console.error("Pray error:", prayErr);  // ← ADD THIS TO SEE THE ERROR
+      }
 
-    setSending(false);
-  };
+      setSending(false);
+    };
 
   const handleComment = async () => {
     if (!newMessage.trim()) return;
@@ -509,8 +509,14 @@ export default function PrayerPage({ user, role, createNotification }) {
 
       <NewPrayerModal open={showNewPrayer} onClose={()=>setShowNewPrayer(false)}
         user={user} onSuccess={fetchRequests}/>
-      <PrayerDetailModal open={!!selectedRequest} onClose={()=>setSelectedRequest(null)}
-        requestId={selectedRequest} user={user} onSuccess={fetchRequests}/>
+      <PrayerDetailModal
+        open={!!selectedId}
+        onClose={()=>setSelectedId(null)}
+        requestId={selectedId}
+        user={user}
+        onSuccess={fetchRequests}
+        createNotification={createNotification}
+      />
 
       {/* Header */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
