@@ -96,6 +96,7 @@ const isExpired = (dateStr) => {
 
 export default function App() {
   const { auth, loading, error, loginWithEmail, logout } = useAuth();
+  console.log("auth.profile:", auth?.profile);
   const [page, setPage] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
   const [showMob, setShowMob] = useState(false);
