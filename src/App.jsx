@@ -179,7 +179,14 @@ useEffect(() => {
   if (!auth) return <Login onLogin={loginWithEmail} error={error} logo={logoUrl} bg={themeUrl}/>;
 
   const role = auth.profile.role;
-  const user = { name: auth.profile.name };
+  const user = { 
+    name: auth.profile.name,
+    id: auth.user.id,
+    email: auth.user.email,
+    memberId: auth.profile.member_id, 
+    branch: auth.profile.branch,     
+    branchId: auth.profile.branch_id,
+  };
 
   return (
     <div style={{
@@ -198,8 +205,8 @@ useEffect(() => {
 
       <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0, overflow:"hidden" }}>
         <Topbar role={role} page={page} user={user}
-          collapsed={collapsed} setCollapsed={setCollapsed}
-          mobile={mob} setShowMob={setShowMob}/>
+        collapsed={collapsed} setCollapsed={setCollapsed}
+        mobile={mob} setShowMob={setShowMob}/>
 
         {role==="regular" && <GamStrip user={user}/>}
 
