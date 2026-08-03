@@ -13,7 +13,7 @@ export function useAuth() {
     }
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*, branches(name)')
+      .select('*, branches(name), members(name)')
       .eq('id', user.id)
       .single();
 
