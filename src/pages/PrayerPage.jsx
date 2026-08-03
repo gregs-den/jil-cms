@@ -374,7 +374,7 @@ function PrayerDetailModal({ open, onClose, requestId, user, onSuccess, createNo
                 </div>
               </div>
               <div style={{ textAlign:"right" }}>
-                <div style={{ fontSize:26, fontWeight:800, color:C.blue }}>{responses.filter(r=>r.is_prayer).length || request.prayer_count}</div>
+                <div style={{ fontSize:26, fontWeight:800, color:C.blue }}>{responses.length}</div>
                 <div style={{ fontSize:11, color:C.mist, fontWeight:600 }}>prayed</div>
               </div>
             </div>
