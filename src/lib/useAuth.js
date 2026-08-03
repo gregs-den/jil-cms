@@ -23,6 +23,18 @@ export function useAuth() {
       return;
     }
 
+    // Fetch member name separately
+    if (profile.member_id) {
+      const { data: member } = await supabase
+        .from('members')
+        .select('name')
+        .eq('id', profile.member_id)
+        .maybeSingle();
+      profile.memberName = member?.name || profile.username;
+    } else {
+      profile.memberName = profile.username;
+    }
+
     setAuth({ user, profile });
   };
 

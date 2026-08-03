@@ -143,7 +143,7 @@ useEffect(() => {
   const renderPage = () => {
     const role = auth.profile.role;
     const user = { 
-      name: auth.profile.members?.name || auth.profile.username || "?",
+      name: auth.profile.memberName || auth.profile.username || "?",
       id: auth.user.id,
       email: auth.user.email,
       memberId: auth.profile.member_id, 
