@@ -140,34 +140,35 @@ useEffect(() => {
   return () => subscription.unsubscribe();
 }, []);
 
-  const renderPage = () => {
-    const role = auth.profile.role;
-    const user = { 
-      name: auth.profile.memberName || auth.profile.username || "?",
-      id: auth.user.id,
-      email: auth.user.email,
-      memberId: auth.profile.member_id, 
-      branch: auth.profile.branch,     
-      branchId: auth.profile.branch_id,
-    };
-    switch(page) {
-      case "dashboard":     return <Dashboard       role={role} user={user}/>;
-      case "attendance": return role === "regular"
-        ? <MyAttendancePage />
-        : <AttendancePage role={role} user={user}/>;
-      case "finance":       return <FinancePage role={role} user={user}/>;
-      case "reports":       return <ReportsPage role={role} user={user}/>;
-      case "members":       return <MembersPage     role={role} user={user}/>;
-      case "announcements": return <AnnouncementPage bg="" user={user} role={role}/>;
-      case "qr":            return <QRGeneratorPage role={role} user={user}/>;
-      case "myqr":          return <MyQRPage        user={user}/>;
-      case "scanner":       return <ScannerPage     role={role}/>;
-      case "rfid":          return <RFIDPage role={role} user={user}/>;
-      case "prayer":        return <PrayerPage role={role} user={user} createNotification={createNotification}/>;
-      case "settings":      return <SettingsPage role={role}/>;
-      default:              return <Dashboard       role={role} user={user}/>;
-    }
-  };
+  const role = auth.profile.role;
+  const user = { 
+  name: auth.profile.memberName || auth.profile.username || "?",
+  id: auth.user.id,
+  email: auth.user.email,
+  memberId: auth.profile.member_id, 
+  branch: auth.profile.branch,     
+  branchId: auth.profile.branch_id,
+};
+
+const renderPage = () => {
+  switch(page) {
+    case "dashboard":     return <Dashboard       role={role} user={user}/>;
+    case "attendance": return role === "regular"
+      ? <MyAttendancePage />
+      : <AttendancePage role={role} user={user}/>;
+    case "finance":       return <FinancePage role={role} user={user}/>;
+    case "reports":       return <ReportsPage role={role} user={user}/>;
+    case "members":       return <MembersPage     role={role} user={user}/>;
+    case "announcements": return <AnnouncementPage bg="" user={user} role={role}/>;
+    case "qr":            return <QRGeneratorPage role={role} user={user}/>;
+    case "myqr":          return <MyQRPage        user={user}/>;
+    case "scanner":       return <ScannerPage     role={role}/>;
+    case "rfid":          return <RFIDPage role={role} user={user}/>;
+    case "prayer":        return <PrayerPage role={role} user={user} createNotification={createNotification}/>;
+    case "settings":      return <SettingsPage role={role}/>;
+    default:              return <Dashboard       role={role} user={user}/>;
+  }
+};
 
   if (loading) {
     return (
