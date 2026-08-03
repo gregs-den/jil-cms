@@ -479,7 +479,7 @@ export default function PrayerPage({ user, role, createNotification }) {
   const fetchRequests = async () => {
     setLoading(true);
     let query = supabase.from("prayer_requests")
-      .select(`*, members(name)`)
+      .select(`*, members(name), prayer_prays(count)`)
       .eq("status", "approved")
       .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false });
@@ -586,7 +586,7 @@ export default function PrayerPage({ user, role, createNotification }) {
                 <Badge label={req.category} color={categoryColor(req.category)}/>
                 <div style={{ display:"flex", alignItems:"center", gap:4 }}>
                   <span style={{ fontSize:18 }}>🙏</span>
-                  <span style={{ fontSize:13, fontWeight:700, color:C.blue }}>{req.prayer_count}</span>
+                  <span style={{ fontSize:13, fontWeight:700, color:C.blue }}>{req.prayer_prays?.[0]?.count ?? req.prayer_count}</span>
                 </div>
               </div>
 
