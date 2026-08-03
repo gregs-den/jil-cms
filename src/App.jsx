@@ -949,8 +949,9 @@ const Topbar = ({ role, page, user, collapsed, setCollapsed, mobile, setShowMob 
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (!user?.memberId) return;
-    fetchNotifications();
+  console.log("Topbar user.memberId:", user?.memberId);
+  if (!user?.memberId) return;
+  fetchNotifications();
 
     // Real-time subscription
     const sub = supabase.channel("notifications")
