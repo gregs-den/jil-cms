@@ -1304,7 +1304,7 @@ const AnnouncementDetailModal = ({ open, item, onClose, user }) => {
   );
 };
 
-const EventDetailModal = ({ open, item, onClose, user }) => {
+const EventDetailModal = ({ open, item, onClose, user, createNotification }) => {
   const [reactions,    setReactions]    = useState({});
   const [myReactions,  setMyReactions]  = useState(new Set());
   const [greetings,    setGreetings]    = useState([]);
@@ -1372,7 +1372,18 @@ const loadGreetings = async () => {
   const { error } = await supabase.from("birthday_greetings").insert({
     event_id: item.id, member_id: user.memberId, message: newGreeting.trim(),
   });
-  if (!error) { setNewGreeting(""); await loadGreetings(); }
+  if (!error) { setNewGreeting(""); await loadGreetings(); 
+    // Notify the birthday person
+    if (item?.member_id && item.member_id !== user?.memberId) {
+      await createNotification?.(
+        item.member_id,
+        "Someone sent you a birthday greeting! 🎂",
+        `${user?.name || "A member"} greeted you: "${newGreeting.trim()}"`,
+        "birthday_greeting",
+        "announcements"
+      );
+    }
+  }
   setSending(false);
 };
 
@@ -1753,6 +1764,7 @@ const Dashboard = ({ role, user }) => {
         item={selectedEvent}
         onClose={() => setSelectedEvent(null)}
         user={user}
+        createNotification={createNotification}
       />
     </div>
   );
