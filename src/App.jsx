@@ -180,16 +180,6 @@ const renderPage = () => {
 
   if (!auth) return <Login onLogin={loginWithEmail} error={error} logo={logoUrl} bg={themeUrl}/>;
 
-  const role = auth.profile.role;
-  const user = { 
-    name: auth.profile.memberName || auth.profile.username || "?",
-    id: auth.user.id,
-    email: auth.user.email,
-    memberId: auth.profile.member_id, 
-    branch: auth.profile.branch,     
-    branchId: auth.profile.branch_id,
-  };
-
   return (
     <div style={{
         display:"flex", height:"100vh",
