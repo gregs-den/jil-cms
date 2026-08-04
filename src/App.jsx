@@ -140,16 +140,6 @@ useEffect(() => {
   return () => subscription.unsubscribe();
 }, []);
 
-  const role = auth.profile.role;
-  const user = { 
-  name: auth.profile.memberName || auth.profile.username || "?",
-  id: auth.user.id,
-  email: auth.user.email,
-  memberId: auth.profile.member_id, 
-  branch: auth.profile.branch,     
-  branchId: auth.profile.branch_id,
-};
-
 const renderPage = () => {
   switch(page) {
     case "dashboard":     return <Dashboard       role={role} user={user}/>;
@@ -179,6 +169,16 @@ const renderPage = () => {
   }
 
   if (!auth) return <Login onLogin={loginWithEmail} error={error} logo={logoUrl} bg={themeUrl}/>;
+
+  const role = auth.profile.role;
+  const user = { 
+  name: auth.profile.memberName || auth.profile.username || "?",
+  id: auth.user.id,
+  email: auth.user.email,
+  memberId: auth.profile.member_id, 
+  branch: auth.profile.branch,     
+  branchId: auth.profile.branch_id,
+};
 
   return (
     <div style={{
