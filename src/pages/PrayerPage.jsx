@@ -304,10 +304,11 @@ function PrayerDetailModal({ open, onClose, requestId, user, onSuccess, createNo
         // Notify the prayer request owner
           if (request?.member_id && request.member_id !== user?.memberId) {
             await createNotification?.(
-              request.member_id,
+              request?.member_id,
               "Someone prayed for you! 🙏",
               `${user?.name || "A member"} prayed for "${request?.title}"`,
-              "prayer_prayed"
+              "prayer_prayed",
+              "prayer"  // ← adds link to prayer page
             );
           }
 
@@ -663,7 +664,8 @@ function PendingApprovalsSection({ onApprovalChange, user, role, createNotificat
         req.member_id,
         "Your prayer request was approved ✅",
         `"${req.title}" is now visible to the community`,
-        "prayer_approved"
+        "prayer_approved",
+        "prayer"  // ← adds link to prayer page
       );
     }
     loadPending();
