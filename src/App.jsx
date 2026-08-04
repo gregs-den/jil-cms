@@ -1380,7 +1380,7 @@ const loadGreetings = async () => {
         "Someone sent you a birthday greeting! 🎂",
         `${user?.name || "A member"} greeted you: "${newGreeting.trim()}"`,
         "birthday_greeting",
-        "announcements"
+        "dashboard"
       );
     }
   }
