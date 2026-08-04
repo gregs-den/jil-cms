@@ -443,7 +443,7 @@ export default function AnnouncementPage({ bg, user, role }) {
   const [announcements, setAnnouncements] = useState([]);
   const [events,        setEvents]        = useState([]);
   const [aForm,         setAForm]         = useState({ title:"", body:"", tag:"Worship", date:"" });
-  const [eForm,         setEForm]         = useState({ name:"", type:"event", date:"" });
+  const [eForm,         setEForm]         = useState({ name:"", type:"event", date:"", member_id:"" });
   const [saving,        setSaving]        = useState(false);
   const [toast,         setToast]         = useState(null);
   const [selectedAnn,   setSelectedAnn]   = useState(null);
@@ -523,7 +523,8 @@ export default function AnnouncementPage({ bg, user, role }) {
     // ✅ Insert with branch_id (UUID)
     const payload = {
       ...eForm,
-      branch_id: role === "superadmin" ? null : (user?.branchId || null)
+      branch_id: role === "superadmin" ? null : (user?.branchId || null),
+      member_id: eForm.member_id || null,
     };
     
     const { data, error } = await supabase.from("events")
@@ -680,7 +681,7 @@ export default function AnnouncementPage({ bg, user, role }) {
                             onClick={() => {
                               const bday = new Date(m.birthdate);
                               const label = bday.toLocaleString("default", { month:"long" }) + " " + bday.getDate();
-                              setEForm({ name:m.name, type:"birthday", date:label });
+                              setEForm({ name:m.name, type:"birthday", date:label, member_id:m.id });
                             }}
                             style={{ border:"none", background:C.rose2, color:C.white,
                               borderRadius:R.full, padding:"5px 12px", cursor:"pointer",
