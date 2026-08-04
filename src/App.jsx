@@ -1226,14 +1226,6 @@ const createNotification = async (memberId, title, message, type, link=null) => 
   }]);
 };
 
-await createNotification?.(
-  request.member_id,
-  "Someone prayed for you! 🙏",
-  `${user?.name || "A member"} prayed for "${request?.title}"`,
-  "prayer_prayed",
-  "prayer"  // ← adds link to prayer page
-);
-
 const REACTION_EMOJIS = ["🙏","❤️","🔥","👏","😊","🎉"];
 
 const AnnouncementDetailModal = ({ open, item, onClose, user }) => {
