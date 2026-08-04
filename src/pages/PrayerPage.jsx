@@ -285,6 +285,7 @@ function PrayerDetailModal({ open, onClose, requestId, user, onSuccess, createNo
   };
 
     const handlePray = async () => {
+      if (!request) return;  // ← ADD THIS
       console.log("handlePray called");
       console.log("createNotification:", createNotification);
       console.log("request.member_id:", request?.member_id);
