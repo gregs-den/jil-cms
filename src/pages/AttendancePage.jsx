@@ -593,6 +593,199 @@ const ServiceReport = ({ serviceReports, mob }) => (
   </div>
 );
 
+// ── Weekly Trend Chart ────────────────────────────────────
+function WeeklyTrendChart({ role, user, branches }) {
+  const [data, setData] = useState([]);
+  const [branchFilter, setBranchFilter] = useState("All");
+  const [loading, setLoading] = useState(true);
+  const mob = useIsMobile();
+
+  useEffect(() => {
+    loadData();
+  }, [branchFilter]);
+
+  const loadData = async () => {
+    setLoading(true);
+    const weeks = [];
+    for (let i = 7; i >= 0; i--) {
+      const start = new Date();
+      start.setDate(start.getDate() - start.getDay() - i * 7);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 6);
+
+      let q = supabase.from("attendance")
+        .select("id, member:members(branch_id, branches(name))")
+        .gte("date", toISODate(start))
+        .lte("date", toISODate(end));
+
+      const { data: rows } = await q;
+      let filtered = rows || [];
+
+      if (branchFilter !== "All") {
+        filtered = filtered.filter(r => r.member?.branches?.name === branchFilter);
+      } else if (role !== "superadmin" && user?.branchId) {
+        filtered = filtered.filter(r => r.member?.branch_id === user.branchId);
+      }
+
+      weeks.push({
+        label: `W${8-i}`,
+        fullLabel: `${start.toLocaleDateString("en-PH",{month:"short",day:"numeric"})}`,
+        count: filtered.length,
+      });
+    }
+    setData(weeks);
+    setLoading(false);
+  };
+
+  const max = Math.max(...data.map(d => d.count), 1);
+
+  return (
+    <div>
+      {role === "superadmin" && (
+        <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+          {["All", ...branches.map(b=>b.name)].map(b => (
+            <button key={b} onClick={()=>setBranchFilter(b)}
+              style={{ padding:"4px 12px", borderRadius:R.full, border:`1.5px solid ${branchFilter===b?C.blue:C.cloud}`,
+                background:branchFilter===b?C.blue:C.white, color:branchFilter===b?C.white:C.slate,
+                fontSize:11, fontWeight:600, cursor:"pointer" }}>
+              {b}
+            </button>
+          ))}
+        </div>
+      )}
+      {loading ? (
+        <div style={{ textAlign:"center", color:C.mist, padding:"20px 0" }}>Loading…</div>
+      ) : (
+        <div style={{ display:"flex", gap:mob?4:10, alignItems:"flex-end", height:160 }}>
+          {data.map((d, i) => (
+            <div key={i} style={{ flex:1, display:"flex", flexDirection:"column",
+              alignItems:"center", gap:6, height:"100%", justifyContent:"flex-end" }}>
+              <div style={{ fontSize:11, fontWeight:700, color:C.ink }}>{d.count}</div>
+              <div style={{ width:"100%", maxWidth:40,
+                background:`linear-gradient(to top, ${C.blue}, ${C.blue2})`,
+                borderRadius:`${R.sm} ${R.sm} 0 0`,
+                height:`${Math.max(4, d.count/max*120)}px`,
+                transition:"height .5s cubic-bezier(.4,0,.2,1)" }}/>
+              <div style={{ fontSize:10, color:C.mist, fontWeight:600, textAlign:"center" }}>
+                {d.fullLabel}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Monthly Trend Chart ───────────────────────────────────
+function MonthlyTrendChart({ role, user, branches }) {
+  const [data, setData] = useState([]);
+  const [branchFilter, setBranchFilter] = useState("All");
+  const [loading, setLoading] = useState(true);
+  const mob = useIsMobile();
+
+  useEffect(() => {
+    loadData();
+  }, [branchFilter]);
+
+  const loadData = async () => {
+    setLoading(true);
+    const months = [];
+    const now = new Date();
+
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const year = d.getFullYear();
+      const month = d.getMonth() + 1;
+      const monthStr = String(month).padStart(2, "0");
+      const nextMonth = month === 12 ? 1 : month + 1;
+      const nextYear = month === 12 ? year + 1 : year;
+      const nextMonthStr = String(nextMonth).padStart(2, "0");
+
+      let q = supabase.from("attendance")
+        .select("id, member:members(branch_id, branches(name))")
+        .gte("date", `${year}-${monthStr}-01`)
+        .lt("date", `${nextYear}-${nextMonthStr}-01`);
+
+      const { data: rows } = await q;
+      let filtered = rows || [];
+
+      if (branchFilter !== "All") {
+        filtered = filtered.filter(r => r.member?.branches?.name === branchFilter);
+      } else if (role !== "superadmin" && user?.branchId) {
+        filtered = filtered.filter(r => r.member?.branch_id === user.branchId);
+      }
+
+      months.push({
+        label: d.toLocaleDateString("en-PH", { month:"short" }),
+        count: filtered.length,
+      });
+    }
+
+    setData(months);
+    setLoading(false);
+  };
+
+  const max = Math.max(...data.map(d => d.count), 1);
+  const colors = [C.blue, C.violet2, C.green, C.amber, C.rose2];
+
+  return (
+    <div>
+      {role === "superadmin" && (
+        <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
+          {["All", ...branches.map(b=>b.name)].map(b => (
+            <button key={b} onClick={()=>setBranchFilter(b)}
+              style={{ padding:"4px 12px", borderRadius:R.full, border:`1.5px solid ${branchFilter===b?C.violet2:C.cloud}`,
+                background:branchFilter===b?C.violet2:C.white, color:branchFilter===b?C.white:C.slate,
+                fontSize:11, fontWeight:600, cursor:"pointer" }}>
+              {b}
+            </button>
+          ))}
+        </div>
+      )}
+      {loading ? (
+        <div style={{ textAlign:"center", color:C.mist, padding:"20px 0" }}>Loading…</div>
+      ) : (
+        <>
+          <div style={{ display:"flex", gap:mob?2:8, alignItems:"flex-end", height:160, marginBottom:8 }}>
+            {data.map((d, i) => (
+              <div key={i} style={{ flex:1, display:"flex", flexDirection:"column",
+                alignItems:"center", gap:4, height:"100%", justifyContent:"flex-end" }}>
+                <div style={{ fontSize:10, fontWeight:700, color:C.ink }}>{d.count}</div>
+                <div style={{ width:"100%", maxWidth:32,
+                  background:`linear-gradient(to top, ${C.violet2}, ${C.violet3})`,
+                  borderRadius:`${R.sm} ${R.sm} 0 0`,
+                  height:`${Math.max(4, d.count/max*120)}px`,
+                  transition:"height .5s cubic-bezier(.4,0,.2,1)" }}/>
+                <div style={{ fontSize:9, color:C.mist, fontWeight:600 }}>{d.label}</div>
+              </div>
+            ))}
+          </div>
+          {/* Summary */}
+          <div style={{ display:"flex", gap:16, paddingTop:12, borderTop:`1px solid ${C.fog}`, flexWrap:"wrap" }}>
+            <div>
+              <div style={{ fontSize:11, color:C.mist }}>Total (12 months)</div>
+              <div style={{ fontSize:16, fontWeight:800, color:C.ink }}>{data.reduce((a,d)=>a+d.count,0).toLocaleString()}</div>
+            </div>
+            <div>
+              <div style={{ fontSize:11, color:C.mist }}>Monthly Average</div>
+              <div style={{ fontSize:16, fontWeight:800, color:C.ink }}>
+                {Math.round(data.reduce((a,d)=>a+d.count,0)/12).toLocaleString()}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize:11, color:C.mist }}>Best Month</div>
+              <div style={{ fontSize:16, fontWeight:800, color:C.green }}>
+                {data.reduce((best,d)=>d.count>best.count?d:best, data[0])?.label} ({Math.max(...data.map(d=>d.count))})
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ════════════════════════════════════════════════════════════
 //  MAIN PAGE
 // ════════════════════════════════════════════════════════════
@@ -929,8 +1122,24 @@ export default function AttendancePage({ role, user }) {
               )}
             </Card>
           </div>
+        {/* Weekly Trend - Last 8 Weeks */}
+          <Card style={{ marginTop:16 }}>
+            <div style={{ fontWeight:700, fontSize:14, color:C.ink, marginBottom:14 }}>
+              📈 Weekly Trend (Last 8 Weeks)
+            </div>
+            <WeeklyTrendChart role={role} user={user} branches={branches}/>
+          </Card>
+
+          {/* Monthly Trend - Last 12 Months */}
+          <Card style={{ marginTop:16 }}>
+            <div style={{ fontWeight:700, fontSize:14, color:C.ink, marginBottom:14 }}>
+              📅 Monthly Trend (Last 12 Months)
+            </div>
+            <MonthlyTrendChart role={role} user={user} branches={branches}/>
+          </Card>
         </>
       ) : view==="report" ? (
+
         <ServiceReport serviceReports={stats.serviceReports} mob={mob}/>
       ) : (
         <>
