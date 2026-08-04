@@ -95,7 +95,7 @@ const isExpired = (dateStr) => {
 ═══════════════════════════════════════════════════════════ */
 
 export default function App() {
-  const { auth, loading, error, loginWithEmail, logout } = useAuth();
+  const { auth, loading, error, loginWithEmail, logout } = useAuth(); 
   const [page, setPage] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
   const [showMob, setShowMob] = useState(false);
@@ -197,7 +197,7 @@ const renderPage = () => {
       <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0, overflow:"hidden" }}>
         <Topbar role={role} page={page} user={user}
         collapsed={collapsed} setCollapsed={setCollapsed}
-        mobile={mob} setShowMob={setShowMob}/>
+        mobile={mob} setShowMob={setShowMob} setPage={setPage}/>
 
         {role==="regular" && <GamStrip user={user}/>}
 
@@ -933,7 +933,7 @@ const Sidebar = ({ role, page, setPage, user, onLogout, collapsed, setCollapsed,
 /* ═══════════════════════════════════════════════════════════
    TOPBAR
 ═══════════════════════════════════════════════════════════ */
-const Topbar = ({ role, page, user, collapsed, setCollapsed, mobile, setShowMob }) => {
+const Topbar = ({ role, page, user, collapsed, setCollapsed, mobile, setShowMob, setPage }) => {
   const menu = MENUS[role]||[];
   const label = menu.find(m=>m.id===page)?.label||"Dashboard";
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -1084,7 +1084,7 @@ const Topbar = ({ role, page, user, collapsed, setCollapsed, mobile, setShowMob 
                       No notifications yet
                     </div>
                   ) : notifications.map(n => (
-                    <div key={n.id} onClick={()=>markRead(n.id)}
+                    <div key={n.id} onClick={()=>{ markRead(n.id); setBellOpen(false); if(n.link) setPage(n.link); }}
                       style={{ padding:"12px 16px", borderBottom:`1px solid ${C.fog}`,
                         background: n.is_read ? C.white : C.blue3,
                         cursor:"pointer", transition:"background .15s" }}>
@@ -1215,15 +1215,24 @@ const logAction = async (action, details, entity, entityId) => {
   }
 };
 
-const createNotification = async (memberId, title, message, type) => {
+const createNotification = async (memberId, title, message, type, link=null) => {
   if (!memberId) return;
   await supabase.from("notifications").insert([{
     member_id: memberId,
     title,
     message,
     type,
+    link,
   }]);
 };
+
+await createNotification?.(
+  request.member_id,
+  "Someone prayed for you! 🙏",
+  `${user?.name || "A member"} prayed for "${request?.title}"`,
+  "prayer_prayed",
+  "prayer"  // ← adds link to prayer page
+);
 
 const REACTION_EMOJIS = ["🙏","❤️","🔥","👏","😊","🎉"];
 
