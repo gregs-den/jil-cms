@@ -12,7 +12,7 @@ import jsQR from "jsqr";
 import PrayerPage from './pages/PrayerPage';
 import AnnouncementPage from './pages/AnnouncementPage';
 import SettingsPage from './pages/SettingsPage';
-// import MyProfilePage from './pages/MyProfilePage';
+import MyProfilePage from './pages/MyProfilePage';
 import RFIDPage from "./pages/RFIDPage";
 
 /* ════════════════════════════════════════════════════════════
