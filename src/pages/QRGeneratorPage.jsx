@@ -191,6 +191,176 @@ const formatDateTime = (iso) => {
   return d.toLocaleString(undefined, { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
 };
 
+function BulkQRTab({ role, user, branches }) {
+  const [members, setMembers] = useState([]);
+  const [branchId, setBranchId] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [qrStyle, setQrStyle] = useState({ size:200, color:"#000000", bg:"#FFFFFF" });
+
+  useEffect(() => {
+    let q = supabase.from("members").select("id, name, member_code, branch_id, branches(name)")
+      .eq("is_active", true).order("name");
+    if (role !== "superadmin" && user?.branchId) q = q.eq("branch_id", user.branchId);
+    q.then(({ data }) => { if (data) setMembers(data); });
+  }, []);
+
+  const filtered = branchId ? members.filter(m => m.branch_id === branchId) : members;
+
+  const generateAll = async () => {
+    if (filtered.length === 0) return;
+    setGenerating(true);
+    setProgress(0);
+
+    // Create a print window with all QR codes
+    const win = window.open("", "_blank");
+    win.document.write(`
+      <html><head><title>Bulk QR Codes</title>
+      <style>
+        body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; text-align: center; break-inside: avoid; }
+        .name { font-weight: 700; font-size: 13px; margin: 8px 0 2px; }
+        .code { font-size: 11px; color: #64748b; }
+        .branch { font-size: 10px; color: #94a3b8; }
+        img { width: 100%; max-width: 160px; }
+        @media print {
+          body { padding: 10px; }
+          .grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+          .no-print { display: none; }
+          @page { size: A4; margin: 10mm; }
+        }
+      </style></head>
+      <body>
+      <div class="no-print" style="margin-bottom:20px">
+        <button onclick="window.print()" style="padding:10px 24px;background:#1D4ED8;color:white;border:none;border-radius:999px;font-weight:700;cursor:pointer;font-size:14px">
+          🖨️ Print All QR Codes
+        </button>
+        <span style="margin-left:12px;font-size:13px;color:#64748b">${filtered.length} QR codes</span>
+      </div>
+      <div class="grid">
+    `);
+
+    for (let i = 0; i < filtered.length; i++) {
+      const m = filtered[i];
+      const payload = JSON.stringify({ memberId: m.id, name: m.name, code: m.member_code });
+      const dataUrl = await QRCode.toDataURL(payload, {
+        width: 200, margin: 1,
+        color: { dark: qrStyle.color, light: qrStyle.bg },
+      });
+
+      win.document.write(`
+        <div class="card">
+          <img src="${dataUrl}" alt="${m.name}"/>
+          <div class="name">${m.name}</div>
+          <div class="code">${m.member_code}</div>
+          <div class="branch">${m.branches?.name || ""}</div>
+        </div>
+      `);
+
+      setProgress(Math.round((i + 1) / filtered.length * 100));
+    }
+
+    win.document.write(`</div></body></html>`);
+    win.document.close();
+    setGenerating(false);
+    setProgress(0);
+  };
+
+  return (
+    <div>
+      <Card style={{ marginBottom:16 }}>
+        <h3 style={{ margin:"0 0 16px", fontWeight:700, fontSize:14, color:C.ink }}>Bulk QR Generation</h3>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:12, marginBottom:16 }}>
+          {role === "superadmin" && (
+            <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:C.slate }}>Branch</label>
+              <select value={branchId} onChange={e=>setBranchId(e.target.value)}
+                style={{ padding:"9px 12px", border:`1.5px solid ${C.fog}`, borderRadius:R.md,
+                  fontSize:13, outline:"none", background:C.white, color:C.ink }}>
+                <option value="">All Branches ({members.length})</option>
+                {branches.map(b=>(
+                  <option key={b.id} value={b.id}>{b.name} ({members.filter(m=>m.branch_id===b.id).length})</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+            <label style={{ fontSize:12, fontWeight:600, color:C.slate }}>QR Color</label>
+            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+              <input type="color" value={qrStyle.color} onChange={e=>setQrStyle({...qrStyle,color:e.target.value})}
+                style={{ width:40, height:36, borderRadius:R.sm, border:`1px solid ${C.fog}`, cursor:"pointer" }}/>
+              <span style={{ fontSize:12, color:C.mist }}>{qrStyle.color}</span>
+            </div>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+            <label style={{ fontSize:12, fontWeight:600, color:C.slate }}>Background</label>
+            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+              <input type="color" value={qrStyle.bg} onChange={e=>setQrStyle({...qrStyle,bg:e.target.value})}
+                style={{ width:40, height:36, borderRadius:R.sm, border:`1px solid ${C.fog}`, cursor:"pointer" }}/>
+              <span style={{ fontSize:12, color:C.mist }}>{qrStyle.bg}</span>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ background:C.fog, borderRadius:R.lg, padding:"12px 16px", marginBottom:16 }}>
+          <div style={{ fontSize:13, color:C.ink, fontWeight:600 }}>
+            {filtered.length} member{filtered.length!==1?"s":""} selected
+          </div>
+          <div style={{ fontSize:12, color:C.mist }}>
+            Opens a printable page with all QR codes in a 4-column grid (A4 ready)
+          </div>
+        </div>
+
+        {generating && (
+          <div style={{ marginBottom:16 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+              <span style={{ fontSize:12, color:C.slate }}>Generating QR codes…</span>
+              <span style={{ fontSize:12, fontWeight:700, color:C.blue }}>{progress}%</span>
+            </div>
+            <div style={{ background:C.fog, borderRadius:R.full, height:8, overflow:"hidden" }}>
+              <div style={{ width:`${progress}%`, height:"100%", background:C.blue,
+                borderRadius:R.full, transition:"width .3s" }}/>
+            </div>
+          </div>
+        )}
+
+        <button onClick={generateAll} disabled={generating || filtered.length === 0}
+          style={{ width:"100%", padding:"12px", borderRadius:R.full,
+            background: generating || filtered.length === 0 ? C.cloud : C.violet2,
+            color:C.white, border:"none", fontWeight:700, fontSize:14,
+            cursor: generating || filtered.length === 0 ? "not-allowed" : "pointer" }}>
+          {generating ? `Generating… ${progress}%` : `📦 Generate ${filtered.length} QR Codes`}
+        </button>
+      </Card>
+
+      {/* Preview */}
+      <Card>
+        <h3 style={{ margin:"0 0 14px", fontWeight:700, fontSize:14, color:C.ink }}>
+          Members ({filtered.length})
+        </h3>
+        <div style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:400, overflowY:"auto" }}>
+          {filtered.map(m => (
+            <div key={m.id} style={{ display:"flex", alignItems:"center", gap:12,
+              padding:"8px 12px", background:C.fog, borderRadius:R.lg }}>
+              <div style={{ width:32, height:32, borderRadius:"50%", background:C.violet3,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:12, fontWeight:700, color:C.violet2, flexShrink:0 }}>
+                {m.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:13, fontWeight:600, color:C.ink }}>{m.name}</div>
+                <div style={{ fontSize:11, color:C.mist }}>{m.member_code} · {m.branches?.name}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 // ════════════════════════════════════════════════════════════
 //  GO LIVE PAGE
 // ════════════════════════════════════════════════════════════
@@ -201,6 +371,10 @@ export default function QRGeneratorPage({ role, user }) {
   const [expiry,      setExpiry]      = useState(defaultExpiry());
   const [branch,      setBranch]      = useState("");
   const [branches,    setBranches]    = useState([]);
+  useEffect(() => {
+  supabase.from("branches").select("id, name").order("name")
+    .then(({ data }) => { if (data) setBranches(data); });
+}, []);
 
   const [activeEvent, setActiveEvent] = useState(null);
   const [history,     setHistory]     = useState([]);
@@ -213,6 +387,7 @@ export default function QRGeneratorPage({ role, user }) {
   const [timeLeft,    setTimeLeft]    = useState("");
 
   // Reopen modal state
+  const [tab, setTab] = useState("live");
   const [reopenRow,  setReopenRow]  = useState(null);
   const [reopenOpen, setReopenOpen] = useState(false);
 
@@ -433,9 +608,13 @@ export default function QRGeneratorPage({ role, user }) {
         onConfirm={handleReopen}
       />
 
-      <h2 style={{ margin:"0 0 24px", fontWeight:800, fontSize:22, color:C.ink, textAlign:"center" }}>
-        Go Live
+      <h2 style={{ margin:"0 0 16px", fontWeight:800, fontSize:22, color:C.ink, textAlign:"center" }}>
+        QR Generator
       </h2>
+      <div style={{ display:"flex", gap:8, marginBottom:20, justifyContent:"center" }}>
+        <Pill label="🔴 Go Live" active={tab==="live"} onClick={()=>setTab("live")} color={C.green}/>
+        <Pill label="📦 Bulk QR" active={tab==="bulk"} onClick={()=>setTab("bulk")} color={C.violet2}/>
+      </div>
 
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))",
         gap:20, alignItems:"start" }}>
@@ -705,6 +884,17 @@ export default function QRGeneratorPage({ role, user }) {
           </div>
         )}
       </div>
+
+        {/* ── Bulk QR Section ── */}
+      <div style={{ marginTop:24 }}>
+        <h3 style={{ fontWeight:700, fontSize:16, color:C.ink, marginBottom:16 }}>
+          📦 Bulk QR Generation
+        </h3>
+        <BulkQRTab role={role} user={user} branches={branches}/>
+      </div>
+
     </div>
   );
+
+  {tab === "bulk" && <BulkQRTab role={role} user={user} branches={branches}/>}
 }
