@@ -5,7 +5,7 @@ import MembersPage from './pages/MembersPage'
 import QRGeneratorPage from './pages/QRGeneratorPage'
 import QRCode from "qrcode";
 import { supabase } from "./lib/supabaseClient";
-import MyProfilePage from '.pages/MyProfilePage';
+import MyProfilePage from './pages/MyProfilePage';
 import MyAttendancePage from './pages/MyAttendancePage';
 import AttendancePage from './pages/AttendancePage';
 import ReportsPage from "./pages/ReportsPage";
