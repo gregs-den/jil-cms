@@ -65,7 +65,7 @@ const Av = ({ name, size=80, photoUrl }) => {
   );
 };
 
-export default function MyProfilePage({ user }) {
+export default function MyProfilePage({ role, user }) {
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
