@@ -142,7 +142,7 @@ useEffect(() => {
 
 const renderPage = () => {
   switch(page) {
-    case "myprofile":     return <MyProfilePage user={user}/>;
+    case "myprofile":     return <MyProfilePage role={role} user={user}/>;
     case "dashboard":     return <Dashboard       role={role} user={user}/>;
     case "attendance": return role === "regular"
       ? <MyAttendancePage />
@@ -294,6 +294,7 @@ const SVG = ({ children, size=20, color="currentColor", sw=1.5 }) => (
 const Ico = {
   home:       (p)=><SVG {...p}><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1h-5v-5H9v5H4a1 1 0 01-1-1z"/></SVG>,
   users:      (p)=><SVG {...p}><circle cx="9" cy="8" r="3.5"/><path d="M2 21v-1.5A5.5 5.5 0 0116 19.5V21"/><path d="M17 5.13a3.5 3.5 0 010 6.74"/><path d="M22 21v-1.5a5.5 5.5 0 00-3.5-5.15"/></SVG>,
+  user: (p)=><SVG {...p}><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></SVG>,
   calendar:   (p)=><SVG {...p}><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></SVG>,
   finance:    (p)=><SVG {...p}><circle cx="12" cy="12" r="9"/><path d="M12 7v1m0 8v1"/><path d="M9.5 10.5A2.5 2.5 0 0112 8h.5a2.5 2.5 0 010 5h-1a2.5 2.5 0 000 5H12a2.5 2.5 0 002.5-2"/></SVG>,
   chart:      (p)=><SVG {...p}><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5"/></SVG>,
@@ -814,16 +815,16 @@ const Toast = ({ msg, type = "info", onDone }) => {
 
 const MENUS = {
   regular: [    
-    {id:"dashboard",      label:"Dashboard",      I:Ico.home},
     {id:"myprofile",      label:"My Profile",     I:Ico.user},
+    {id:"dashboard",      label:"Dashboard",      I:Ico.home},
     {id:"attendance",     label:"Attendance",     I:Ico.attendance},
     {id:"finance",        label:"My Finance",     I:Ico.finance},
     {id:"myqr",           label:"My QR Code",     I:Ico.idcard},
     {id:"prayer",         label:"Prayer",         I:Ico.prayer},
   ],
   admin: [
+    {id:"myprofile",      label:"My Profile",     I:Ico.user},
     {id:"dashboard",      label:"Dashboard",      I:Ico.home},
-    // {id:"myprofile",      label:"My Profile",     I:Ico.user},
     {id:"members",        label:"Members",        I:Ico.users},
     {id:"attendance",     label:"Attendance",     I:Ico.attendance},
     {id:"finance",        label:"Finance",        I:Ico.finance},
@@ -835,8 +836,8 @@ const MENUS = {
     {id:"prayer",         label:"Prayer Requests", I:Ico.prayer},
  ],
 superadmin: [
+  {id:"myprofile",        label:"My Profile",     I:Ico.user},
   {id:"dashboard",        label:"Dashboard",      I:Ico.home},
-  // {id:"myprofile",        label:"My Profile",     I:Ico.user},
   {id:"members",          label:"Members",        I:Ico.users},
   {id:"attendance",       label:"Attendance",     I:Ico.attendance},
   {id:"finance",          label:"Finance",        I:Ico.finance},
