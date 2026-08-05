@@ -5,6 +5,7 @@ import MembersPage from './pages/MembersPage'
 import QRGeneratorPage from './pages/QRGeneratorPage'
 import QRCode from "qrcode";
 import { supabase } from "./lib/supabaseClient";
+import myProfilePage from '.pages/myProfilePage';
 import MyAttendancePage from './pages/MyAttendancePage';
 import AttendancePage from './pages/AttendancePage';
 import ReportsPage from "./pages/ReportsPage";
@@ -141,6 +142,7 @@ useEffect(() => {
 
 const renderPage = () => {
   switch(page) {
+    case "myprofile":     return <myProfilePage role={role} user={user}/>;
     case "dashboard":     return <Dashboard       role={role} user={user}/>;
     case "attendance": return role === "regular"
       ? <MyAttendancePage />
@@ -812,36 +814,39 @@ const Toast = ({ msg, type = "info", onDone }) => {
 
 const MENUS = {
   regular: [
-    {id:"dashboard", label:"Dashboard",   I:Ico.home},
-    {id:"attendance",label:"Attendance",  I:Ico.attendance},
-    {id:"finance",   label:"My Finance",  I:Ico.finance},
-    {id:"myqr",      label:"My QR Code",  I:Ico.idcard},
-    {id:"prayer",    label:"Prayer",      I:Ico.prayer},
+    {id:"profile",        label:"My Profile",     I:Ico.user},
+    {id:"dashboard",      label:"Dashboard",      I:Ico.home},
+    {id:"attendance",     label:"Attendance",     I:Ico.attendance},
+    {id:"finance",        label:"My Finance",     I:Ico.finance},
+    {id:"myqr",           label:"My QR Code",     I:Ico.idcard},
+    {id:"prayer",         label:"Prayer",         I:Ico.prayer},
   ],
   admin: [
-  {id:"dashboard",      label:"Dashboard",    I:Ico.home},
-  {id:"members",        label:"Members",      I:Ico.users},
-  {id:"attendance",     label:"Attendance",   I:Ico.attendance},
-  {id:"finance",        label:"Finance",      I:Ico.finance},
-  {id:"reports",        label:"Reports",      I:Ico.report},
-  {id:"announcements",  label:"Announcements",I:Ico.bell},   
-  {id:"qr",             label:"QR Generator", I:Ico.qr},
-  {id:"scanner",        label:"QR Scanner",   I:Ico.scan},
-  {id:"rfid",           label:"RFID",         I:Ico.rfid },  
-  {id:"prayer",         label:"Prayer Requests", I:Ico.prayer},
+    {id:"profile",        label:"My Profile",     I:Ico.user},
+    {id:"dashboard",      label:"Dashboard",      I:Ico.home},
+    {id:"members",        label:"Members",        I:Ico.users},
+    {id:"attendance",     label:"Attendance",     I:Ico.attendance},
+    {id:"finance",        label:"Finance",        I:Ico.finance},
+    {id:"reports",        label:"Reports",        I:Ico.report},
+    {id:"announcements",  label:"Announcements",  I:Ico.bell},   
+    {id:"qr",             label:"QR Generator",   I:Ico.qr},
+    {id:"scanner",        label:"QR Scanner",     I:Ico.scan},
+    {id:"rfid",           label:"RFID",           I:Ico.rfid },  
+    {id:"prayer",         label:"Prayer Requests", I:Ico.prayer},
  ],
 superadmin: [
-  {id:"dashboard",      label:"Dashboard",    I:Ico.home},
-  {id:"members",        label:"Members",      I:Ico.users},
-  {id:"attendance",     label:"Attendance",   I:Ico.attendance},
-  {id:"finance",        label:"Finance",      I:Ico.finance},
-  {id:"reports",        label:"Reports",      I:Ico.report},
-  {id:"announcements",  label:"Announcements",I:Ico.bell},   
-  {id:"qr",             label:"QR Generator", I:Ico.qr},
-  {id:"scanner",        label:"QR Scanner",   I:Ico.scan},
-  {id:"rfid",           label:"RFID",         I:Ico.rfid },
-  {id:"prayer",         label:"Prayer Requests", I:Ico.prayer},
-  {id:"settings",       label:"Settings",     I:Ico.settings},
+  {id:"profile",          label:"My Profile",     I:Ico.user},
+  {id:"dashboard",        label:"Dashboard",      I:Ico.home},
+  {id:"members",          label:"Members",        I:Ico.users},
+  {id:"attendance",       label:"Attendance",     I:Ico.attendance},
+  {id:"finance",          label:"Finance",        I:Ico.finance},
+  {id:"reports",          label:"Reports",        I:Ico.report},
+  {id:"announcements",    label:"Announcements",  I:Ico.bell},   
+  {id:"qr",               label:"QR Generator",   I:Ico.qr},
+  {id:"scanner",          label:"QR Scanner",     I:Ico.scan},
+  {id:"rfid",             label:"RFID",           I:Ico.rfid },
+  {id:"prayer",           label:"Prayer Requests", I:Ico.prayer},
+  {id:"settings",         label:"Settings",       I:Ico.settings},
   ],
 };
 
@@ -1132,6 +1137,11 @@ const Topbar = ({ role, page, user, collapsed, setCollapsed, mobile, setShowMob,
                   <div style={{ fontWeight:700, fontSize:13, color:C.ink }}>{user.name}</div>
                   <div style={{ fontSize:11, color:C.mist }}>{role}</div>
                 </div>
+                <button onClick={()=>{ setPage("myprofile"); setDropdownOpen(false); }}
+                  style={{ display:"flex", alignItems:"center", gap:8, width:"100%", padding:"10px 16px",
+                    border:"none", background:"transparent", cursor:"pointer", fontSize:13, color:C.ink, textAlign:"left" }}>
+                  👤 My Profile
+                </button>
                 <button onClick={()=>{ setPwModal(true); setDropdownOpen(false); }}
                   style={{ display:"flex", alignItems:"center", gap:8, width:"100%", padding:"10px 16px",
                     border:"none", background:"transparent", cursor:"pointer", fontSize:13,
