@@ -616,6 +616,8 @@ export default function QRGeneratorPage({ role, user }) {
         <Pill label="📦 Bulk QR" active={tab==="bulk"} onClick={()=>setTab("bulk")} color={C.violet2}/>
       </div>
 
+      {tab === "live" && <>
+
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))",
         gap:20, alignItems:"start" }}>
 
@@ -883,18 +885,11 @@ export default function QRGeneratorPage({ role, user }) {
             </div>
           </div>
         )}
-      </div>
-
-        {/* ── Bulk QR Section ── */}
-      <div style={{ marginTop:24 }}>
-        <h3 style={{ fontWeight:700, fontSize:16, color:C.ink, marginBottom:16 }}>
-          📦 Bulk QR Generation
-        </h3>
+        </div>
+        </>}
+          {tab === "bulk" && (
         <BulkQRTab role={role} user={user} branches={branches}/>
-      </div>
-
+      )}
     </div>
   );
-
-  {tab === "bulk" && <BulkQRTab role={role} user={user} branches={branches}/>}
 }
