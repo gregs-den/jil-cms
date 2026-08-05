@@ -815,7 +815,7 @@ const Toast = ({ msg, type = "info", onDone }) => {
 const MENUS = {
   regular: [    
     {id:"dashboard",      label:"Dashboard",      I:Ico.home},
-    // {id:"myprofile",      label:"My Profile",     I:Ico.user},
+    {id:"myprofile",      label:"My Profile",     I:Ico.user},
     {id:"attendance",     label:"Attendance",     I:Ico.attendance},
     {id:"finance",        label:"My Finance",     I:Ico.finance},
     {id:"myqr",           label:"My QR Code",     I:Ico.idcard},
