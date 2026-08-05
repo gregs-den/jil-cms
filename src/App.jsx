@@ -815,7 +815,6 @@ const Toast = ({ msg, type = "info", onDone }) => {
 
 const MENUS = {
   regular: [    
-    {id:"myprofile",      label:"My Profile",     I:Ico.user},
     {id:"dashboard",      label:"Dashboard",      I:Ico.home},
     {id:"attendance",     label:"Attendance",     I:Ico.attendance},
     {id:"finance",        label:"My Finance",     I:Ico.finance},
@@ -823,7 +822,6 @@ const MENUS = {
     {id:"prayer",         label:"Prayer",         I:Ico.prayer},
   ],
   admin: [
-    {id:"myprofile",      label:"My Profile",     I:Ico.user},
     {id:"dashboard",      label:"Dashboard",      I:Ico.home},
     {id:"members",        label:"Members",        I:Ico.users},
     {id:"attendance",     label:"Attendance",     I:Ico.attendance},
@@ -836,7 +834,6 @@ const MENUS = {
     {id:"prayer",         label:"Prayer Requests", I:Ico.prayer},
  ],
 superadmin: [
-  {id:"myprofile",        label:"My Profile",     I:Ico.user},
   {id:"dashboard",        label:"Dashboard",      I:Ico.home},
   {id:"members",          label:"Members",        I:Ico.users},
   {id:"attendance",       label:"Attendance",     I:Ico.attendance},
