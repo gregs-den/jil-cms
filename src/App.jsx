@@ -142,7 +142,7 @@ useEffect(() => {
 
 const renderPage = () => {
   switch(page) {
-    // case "myprofile":     return <MyProfilePage role={role} user={user}/>;
+    case "myprofile":     return <MyProfilePage role={role} user={user}/>;
     case "dashboard":     return <Dashboard       role={role} user={user}/>;
     case "attendance": return role === "regular"
       ? <MyAttendancePage />
