@@ -12,7 +12,7 @@ import jsQR from "jsqr";
 import PrayerPage from './pages/PrayerPage';
 import AnnouncementPage from './pages/AnnouncementPage';
 import SettingsPage from './pages/SettingsPage';
-import MyProfilePage from './pages/MyProfilePage';
+// import MyProfilePage from './pages/MyProfilePage';
 import RFIDPage from "./pages/RFIDPage";
 
 /* ════════════════════════════════════════════════════════════
@@ -142,7 +142,7 @@ useEffect(() => {
 
 const renderPage = () => {
   switch(page) {
-    case "myprofile":     return <MyProfilePage role={role} user={user}/>;
+    // case "myprofile":     return <MyProfilePage role={role} user={user}/>;
     case "dashboard":     return <Dashboard       role={role} user={user}/>;
     case "attendance": return role === "regular"
       ? <MyAttendancePage />
@@ -815,7 +815,7 @@ const Toast = ({ msg, type = "info", onDone }) => {
 const MENUS = {
   regular: [    
     {id:"dashboard",      label:"Dashboard",      I:Ico.home},
-    {id:"myprofile",      label:"My Profile",     I:Ico.user},
+    // {id:"myprofile",      label:"My Profile",     I:Ico.user},
     {id:"attendance",     label:"Attendance",     I:Ico.attendance},
     {id:"finance",        label:"My Finance",     I:Ico.finance},
     {id:"myqr",           label:"My QR Code",     I:Ico.idcard},
@@ -823,7 +823,7 @@ const MENUS = {
   ],
   admin: [
     {id:"dashboard",      label:"Dashboard",      I:Ico.home},
-    {id:"myprofile",      label:"My Profile",     I:Ico.user},
+    // {id:"myprofile",      label:"My Profile",     I:Ico.user},
     {id:"members",        label:"Members",        I:Ico.users},
     {id:"attendance",     label:"Attendance",     I:Ico.attendance},
     {id:"finance",        label:"Finance",        I:Ico.finance},
@@ -836,7 +836,7 @@ const MENUS = {
  ],
 superadmin: [
   {id:"dashboard",        label:"Dashboard",      I:Ico.home},
-  {id:"myprofile",        label:"My Profile",     I:Ico.user},
+  // {id:"myprofile",        label:"My Profile",     I:Ico.user},
   {id:"members",          label:"Members",        I:Ico.users},
   {id:"attendance",       label:"Attendance",     I:Ico.attendance},
   {id:"finance",          label:"Finance",        I:Ico.finance},
