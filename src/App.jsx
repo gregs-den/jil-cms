@@ -5,7 +5,7 @@ import MembersPage from './pages/MembersPage'
 import QRGeneratorPage from './pages/QRGeneratorPage'
 import QRCode from "qrcode";
 import { supabase } from "./lib/supabaseClient";
-import myProfilePage from '.pages/myProfilePage';
+import MyProfilePage from '.pages/MyProfilePage';
 import MyAttendancePage from './pages/MyAttendancePage';
 import AttendancePage from './pages/AttendancePage';
 import ReportsPage from "./pages/ReportsPage";
@@ -142,7 +142,7 @@ useEffect(() => {
 
 const renderPage = () => {
   switch(page) {
-    case "myprofile":     return <myProfilePage role={role} user={user}/>;
+    case "myprofile":     return <MyProfilePage role={role} user={user}/>;
     case "dashboard":     return <Dashboard       role={role} user={user}/>;
     case "attendance": return role === "regular"
       ? <MyAttendancePage />
