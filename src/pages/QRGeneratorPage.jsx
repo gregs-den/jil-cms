@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import QRCode from "qrcode";
+import jsPDF from "jspdf";
 import { supabase } from "../lib/supabaseClient";
+
 // Import for CSV parsing, PDF export, and ZIP creation
 // Add these to package.json: papaparse, html2pdf, jszip
 
