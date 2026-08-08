@@ -1045,8 +1045,18 @@ export default function QRGeneratorPage({ role, user }) {
         QR Generator
       </h2>
       <div style={{ display:"flex", gap:8, marginBottom:20, justifyContent:"center" }}>
-        <Pill label="🔴 Go Live" active={tab==="live"} onClick={()=>setTab("live")} color={C.green}/>
-        <Pill label="📦 Bulk QR" active={tab==="bulk"} onClick={()=>setTab("bulk")} color={C.violet2}/>
+        <div style={{ display:"flex", gap:8 }}>
+          <button onClick={()=>setTab("live")} style={{ padding:"10px 18px", borderRadius:R.full, 
+            background:tab==="live"?C.green3:C.fog, color:tab==="live"?C.green:C.slate, 
+            border:"none", fontWeight:600, fontSize:13, cursor:"pointer" }}>
+            🔴 Go Live
+          </button>
+          <button onClick={()=>setTab("bulk")} style={{ padding:"10px 18px", borderRadius:R.full, 
+            background:tab==="bulk"?C.violet3:C.fog, color:tab==="bulk"?C.violet2:C.slate, 
+            border:"none", fontWeight:600, fontSize:13, cursor:"pointer" }}>
+            📦 Bulk QR
+          </button>
+        </div>
       </div>
 
       {tab === "live" && <>
