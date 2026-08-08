@@ -457,7 +457,6 @@ function BulkQRTab({ role, user, branches }) {
 
     try {
       // Create PDF content
-      const { jsPDF } = window.jspdf || {};
       if (!jsPDF) {
         showToast("PDF library not loaded. Try print instead.", "warn");
         setGenerating(false);
