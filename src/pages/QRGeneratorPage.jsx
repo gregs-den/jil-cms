@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import QRCode from "qrcode";
 import { supabase } from "../lib/supabaseClient";
+// Import for CSV parsing, PDF export, and ZIP creation
+// Add these to package.json: papaparse, html2pdf, jszip
 
 // ── Design tokens ───────────────────────────────────────────
 const C = {
@@ -66,6 +68,13 @@ const Toast = ({ msg, type="success", onDone }) => {
     </div>
   );
 };
+
+const Card = ({ children, style={} }) => (
+  <div style={{ background:C.white, borderRadius:R.xl, boxShadow:SH.md, 
+    border:`1px solid ${C.fog}`, padding:20, ...style }}>
+    {children}
+  </div>
+);
 
 // ── Reopen Modal ─────────────────────────────────────────────
 // Lets admin pick a new expiry time and reactivate an ended/expired event
@@ -192,131 +201,551 @@ const formatDateTime = (iso) => {
 };
 
 function BulkQRTab({ role, user, branches }) {
+  // ── Core State ──
   const [members, setMembers] = useState([]);
   const [branchId, setBranchId] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedMembers, setSelectedMembers] = useState(new Set());
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [toast, setToast] = useState(null);
+  
+  // ── Customization State ──
   const [qrStyle, setQrStyle] = useState({ size:200, color:"#000000", bg:"#FFFFFF" });
+  const [qrSize, setQrSize] = useState(200);
+  const [template, setTemplate] = useState("standard");
+  const [showLabels, setShowLabels] = useState(true);
+  const [labelFields, setLabelFields] = useState(["name", "member_code", "branch"]);
+  const [gridColumns, setGridColumns] = useState(4);
+  
+  // ── Export State ──
+  const [exportFormat, setExportFormat] = useState("print");
+  const [csvFile, setCsvFile] = useState(null);
+  
+  // ── Templates ──
+  const templates = {
+    standard: { name: "Standard", gap: 20, cols: 4 },
+    compact: { name: "Compact", gap: 12, cols: 5 },
+    large: { name: "Large", gap: 24, cols: 3 },
+    minimal: { name: "Minimal", gap: 16, cols: 4 },
+  };
 
+  // Fetch members from database
   useEffect(() => {
-    let q = supabase.from("members").select("id, name, member_code, branch_id, branches(name)")
-      .eq("is_active", true).order("name");
-    if (role !== "superadmin" && user?.branchId) q = q.eq("branch_id", user.branchId);
-    q.then(({ data }) => { if (data) setMembers(data); });
+    const fetchMembers = async () => {
+      setLoading(true);
+      let q = supabase.from("members").select("id, name, member_code, branch_id, email, branches(name)")
+        .eq("is_active", true).order("name");
+      if (role !== "superadmin" && user?.branchId) q = q.eq("branch_id", user.branchId);
+      const { data } = await q;
+      if (data) setMembers(data);
+      setLoading(false);
+    };
+    fetchMembers();
   }, []);
 
-  const filtered = branchId ? members.filter(m => m.branch_id === branchId) : members;
+  // ── Filtering Logic ──
+  const filtered = members.filter(m => {
+    const matchesBranch = !branchId || m.branch_id === branchId;
+    const matchesSearch = !searchQuery || 
+      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.member_code.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesBranch && matchesSearch;
+  });
 
-  const generateAll = async () => {
+  // ── CSV Upload Handler ──
+  const handleCsvUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        // Parse CSV manually or use papaparse if available
+        const csv = event.target.result;
+        const lines = csv.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        
+        const newMembers = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const values = lines[i].split(',').map(v => v.trim());
+          const member = {};
+          headers.forEach((h, idx) => { member[h] = values[idx]; });
+          newMembers.push({ ...member, id: `csv_${i}` });
+        }
+        
+        // Add to members if they don't exist
+        const uniqueMembers = [...members, ...newMembers.filter(
+          nm => !members.find(m => m.member_code === nm.member_code)
+        )];
+        setMembers(uniqueMembers);
+        showToast(`Imported ${newMembers.length} members from CSV`, "success");
+      } catch (err) {
+        showToast("CSV parsing failed", "error");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // ── Database Storage ──
+  const saveToHistory = async () => {
+    try {
+      await supabase.from("qr_generation_history").insert({
+        user_id: user.id,
+        branch_id: branchId || null,
+        member_count: selectedMembers.size || filtered.length,
+        template,
+        qr_style: qrStyle,
+        grid_columns: gridColumns,
+        created_at: new Date().toISOString(),
+      });
+      showToast("Saved to history", "success");
+    } catch (err) {
+      console.error("Failed to save history:", err);
+    }
+  };
+
+  // ── Export Functions ──
+  const generateQRDataUrl = async (m) => {
+    const payload = JSON.stringify({ 
+      memberId: m.id, 
+      name: m.name, 
+      code: m.member_code,
+      branch: m.branches?.name 
+    });
+    return await QRCode.toDataURL(payload, {
+      width: qrSize,
+      margin: 1,
+      color: { dark: qrStyle.color, light: qrStyle.bg },
+    });
+  };
+
+  // Print/Web Preview
+  const generatePrintView = async () => {
     if (filtered.length === 0) return;
     setGenerating(true);
     setProgress(0);
 
-    // Create a print window with all QR codes
+    const toExport = selectedMembers.size > 0 
+      ? filtered.filter(m => selectedMembers.has(m.id))
+      : filtered;
+
     const win = window.open("", "_blank");
+    const templateConfig = templates[template];
+    
     win.document.write(`
-      <html><head><title>Bulk QR Codes</title>
+      <html><head><title>Bulk QR Codes - ${new Date().toLocaleDateString()}</title>
       <style>
-        body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-        .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; text-align: center; break-inside: avoid; }
-        .name { font-weight: 700; font-size: 13px; margin: 8px 0 2px; }
-        .code { font-size: 11px; color: #64748b; }
+        body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+        .header { margin-bottom: 24px; }
+        .title { font-size: 24px; font-weight: 700; color: #0a0f1e; margin: 0 0 8px; }
+        .meta { font-size: 13px; color: #64748b; }
+        .grid { display: grid; grid-template-columns: repeat(${templateConfig.cols}, 1fr); gap: ${templateConfig.gap}px; }
+        .card { 
+          border: 1px solid #e2e8f0; 
+          border-radius: 12px; 
+          padding: 16px; 
+          text-align: center; 
+          break-inside: avoid;
+          background: white;
+          box-shadow: 0 2px 8px rgba(0,0,0,.07);
+        }
+        .qr-container { margin-bottom: 12px; }
+        .qr-container img { width: 100%; max-width: ${qrSize}px; }
+        .name { font-weight: 700; font-size: 13px; margin: 8px 0 4px; color: #0a0f1e; }
+        .code { font-size: 11px; color: #64748b; margin: 2px 0; }
         .branch { font-size: 10px; color: #94a3b8; }
-        img { width: 100%; max-width: 160px; }
+        .no-print { display: block; margin-bottom: 20px; }
+        button { padding: 12px 24px; background: #1D4ED8; color: white; border: none; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 14px; }
+        button:hover { background: #3B82F6; }
+        .stats { font-size: 13px; color: #64748b; margin-left: 12px; }
         @media print {
-          body { padding: 10px; }
-          .grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+          body { padding: 10px; background: white; }
+          .grid { grid-template-columns: repeat(${templateConfig.cols}, 1fr); gap: ${templateConfig.gap / 2}px; }
           .no-print { display: none; }
           @page { size: A4; margin: 10mm; }
         }
       </style></head>
       <body>
-      <div class="no-print" style="margin-bottom:20px">
-        <button onclick="window.print()" style="padding:10px 24px;background:#1D4ED8;color:white;border:none;border-radius:999px;font-weight:700;cursor:pointer;font-size:14px">
-          🖨️ Print All QR Codes
-        </button>
-        <span style="margin-left:12px;font-size:13px;color:#64748b">${filtered.length} QR codes</span>
+      <div class="no-print">
+        <button onclick="window.print()">🖨️ Print All QR Codes</button>
+        <span class="stats">${toExport.length} QR codes | Template: ${templates[template].name}</span>
+      </div>
+      <div class="header">
+        <div class="title">Member QR Codes</div>
+        <div class="meta">Generated on ${new Date().toLocaleString()}</div>
       </div>
       <div class="grid">
     `);
 
-    for (let i = 0; i < filtered.length; i++) {
-      const m = filtered[i];
-      const payload = JSON.stringify({ memberId: m.id, name: m.name, code: m.member_code });
-      const dataUrl = await QRCode.toDataURL(payload, {
-        width: 200, margin: 1,
-        color: { dark: qrStyle.color, light: qrStyle.bg },
-      });
+    for (let i = 0; i < toExport.length; i++) {
+      const m = toExport[i];
+      const dataUrl = await generateQRDataUrl(m);
+
+      let labelHtml = "";
+      if (showLabels) {
+        if (labelFields.includes("name")) labelHtml += `<div class="name">${m.name}</div>`;
+        if (labelFields.includes("member_code")) labelHtml += `<div class="code">${m.member_code}</div>`;
+        if (labelFields.includes("branch")) labelHtml += `<div class="branch">${m.branches?.name || ""}</div>`;
+      }
 
       win.document.write(`
         <div class="card">
-          <img src="${dataUrl}" alt="${m.name}"/>
-          <div class="name">${m.name}</div>
-          <div class="code">${m.member_code}</div>
-          <div class="branch">${m.branches?.name || ""}</div>
+          <div class="qr-container">
+            <img src="${dataUrl}" alt="${m.name}"/>
+          </div>
+          ${labelHtml}
         </div>
       `);
 
-      setProgress(Math.round((i + 1) / filtered.length * 100));
+      setProgress(Math.round((i + 1) / toExport.length * 100));
     }
 
     win.document.write(`</div></body></html>`);
     win.document.close();
     setGenerating(false);
     setProgress(0);
+    saveToHistory();
+  };
+
+  // Download as PNG/JPG/SVG
+  const downloadAsImages = async (format) => {
+    if (filtered.length === 0) return;
+    setGenerating(true);
+    setProgress(0);
+
+    const toExport = selectedMembers.size > 0 
+      ? filtered.filter(m => selectedMembers.has(m.id))
+      : filtered;
+
+    // Using JSZip for bundling
+    // For single files, just download
+    for (let i = 0; i < toExport.length; i++) {
+      const m = toExport[i];
+      const dataUrl = await generateQRDataUrl(m);
+      
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `QR_${m.member_code}_${m.name.replace(/\s+/g, '_')}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setProgress(Math.round((i + 1) / toExport.length * 100));
+      // Stagger downloads
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    setGenerating(false);
+    setProgress(0);
+    showToast(`Downloaded ${toExport.length} QR codes as ${format}`, "success");
+    saveToHistory();
+  };
+
+  // Export as PDF
+  const exportPdf = async () => {
+    setGenerating(true);
+    setProgress(0);
+    
+    const toExport = selectedMembers.size > 0 
+      ? filtered.filter(m => selectedMembers.has(m.id))
+      : filtered;
+
+    try {
+      // Create PDF content
+      const { jsPDF } = window.jspdf || {};
+      if (!jsPDF) {
+        showToast("PDF library not loaded. Try print instead.", "warn");
+        setGenerating(false);
+        return;
+      }
+
+      const doc = new jsPDF();
+      const templateConfig = templates[template];
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 10;
+      const colWidth = (pageWidth - margin * 2) / templateConfig.cols;
+      const spacing = 5;
+
+      let x = margin, y = margin + 15;
+      doc.setFontSize(14);
+      doc.text("Member QR Codes", margin, margin + 5);
+
+      for (let i = 0; i < toExport.length; i++) {
+        const m = toExport[i];
+        const dataUrl = await generateQRDataUrl(m);
+
+        if (y + qrSize / 4 > pageHeight - margin) {
+          doc.addPage();
+          x = margin;
+          y = margin;
+        }
+
+        // Add QR
+        doc.addImage(dataUrl, 'PNG', x + (colWidth - qrSize / 4) / 2, y, qrSize / 4, qrSize / 4);
+
+        // Add labels
+        let labelY = y + qrSize / 4 + 2;
+        if (showLabels) {
+          doc.setFontSize(8);
+          if (labelFields.includes("name")) {
+            doc.text(m.name.substring(0, 15), x + colWidth / 2, labelY, { align: "center" });
+            labelY += 3;
+          }
+          if (labelFields.includes("member_code")) {
+            doc.text(m.member_code, x + colWidth / 2, labelY, { align: "center" });
+            labelY += 3;
+          }
+        }
+
+        x += colWidth;
+        if (x + colWidth > pageWidth) {
+          x = margin;
+          y += qrSize / 4 + 20;
+        }
+
+        setProgress(Math.round((i + 1) / toExport.length * 100));
+      }
+
+      doc.save(`QR_Codes_${new Date().toISOString().split('T')[0]}.pdf`);
+      showToast(`PDF exported with ${toExport.length} QR codes`, "success");
+      saveToHistory();
+    } catch (err) {
+      console.error("PDF export failed:", err);
+      showToast("PDF export failed", "error");
+    }
+    
+    setGenerating(false);
+    setProgress(0);
+  };
+
+  // Send via Email
+  const sendViaEmail = async () => {
+    const toExport = selectedMembers.size > 0 
+      ? filtered.filter(m => selectedMembers.has(m.id))
+      : filtered;
+
+    setGenerating(true);
+    setProgress(0);
+
+    try {
+      const qrDataUrls = {};
+      for (let i = 0; i < toExport.length; i++) {
+        qrDataUrls[toExport[i].id] = await generateQRDataUrl(toExport[i]);
+        setProgress(Math.round((i + 1) / toExport.length * 100));
+      }
+
+      // Call backend email function
+      const { data, error } = await supabase.functions.invoke('send-bulk-qr-emails', {
+        body: {
+          members: toExport.map(m => ({ ...m, qr_data_url: qrDataUrls[m.id] })),
+          sender_id: user.id,
+        }
+      });
+
+      if (error) throw error;
+      showToast(`Sent QR codes to ${toExport.length} members`, "success");
+      saveToHistory();
+    } catch (err) {
+      console.error("Email send failed:", err);
+      showToast("Failed to send emails", "error");
+    }
+
+    setGenerating(false);
+    setProgress(0);
+  };
+
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3200);
+  };
+
+  const toggleMemberSelection = (memberId) => {
+    const newSelected = new Set(selectedMembers);
+    if (newSelected.has(memberId)) {
+      newSelected.delete(memberId);
+    } else {
+      newSelected.add(memberId);
+    }
+    setSelectedMembers(newSelected);
+  };
+
+  const selectAll = () => {
+    setSelectedMembers(new Set(filtered.map(m => m.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedMembers(new Set());
   };
 
   return (
     <div>
+      {/* ── CSV Upload ── */}
+      <Card style={{ marginBottom:16, background:C.blue3 }}>
+        <h3 style={{ margin:"0 0 12px", fontWeight:700, fontSize:13, color:C.blue }}>📤 Import Members from CSV</h3>
+        <input type="file" accept=".csv" onChange={handleCsvUpload}
+          style={{ padding:"8px 12px", border:`1.5px dashed ${C.blue}`, borderRadius:R.md,
+            fontSize:12, cursor:"pointer", color:C.slate }}/>
+        <div style={{ fontSize:11, color:C.mist, marginTop:6 }}>
+          Expected columns: name, member_code, email, branch (optional)
+        </div>
+      </Card>
+
+      {/* ── Configuration ── */}
       <Card style={{ marginBottom:16 }}>
-        <h3 style={{ margin:"0 0 16px", fontWeight:700, fontSize:14, color:C.ink }}>Bulk QR Generation</h3>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:12, marginBottom:16 }}>
+        <h3 style={{ margin:"0 0 16px", fontWeight:700, fontSize:14, color:C.ink }}>⚙️ QR Configuration</h3>
+        
+        {/* Row 1: Branch, Size, Template */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12, marginBottom:16 }}>
           {role === "superadmin" && (
-            <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:C.slate }}>Branch</label>
-              <select value={branchId} onChange={e=>setBranchId(e.target.value)}
-                style={{ padding:"9px 12px", border:`1.5px solid ${C.fog}`, borderRadius:R.md,
-                  fontSize:13, outline:"none", background:C.white, color:C.ink }}>
-                <option value="">All Branches ({members.length})</option>
-                {branches.map(b=>(
-                  <option key={b.id} value={b.id}>{b.name} ({members.filter(m=>m.branch_id===b.id).length})</option>
-                ))}
-              </select>
-            </div>
+            <Inp label="Branch" options={["All Branches", ...branches.map(b => b.name)]}
+              value={branchId ? branches.find(b => b.id === branchId)?.name || "" : "All Branches"}
+              onChange={v => setBranchId(v === "All Branches" ? "" : branches.find(b => b.name === v)?.id || "")}/>
           )}
+          
+          <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+            <label style={{ fontSize:12, fontWeight:600, color:C.slate }}>QR Size (px)</label>
+            <select value={qrSize} onChange={e => setQrSize(Number(e.target.value))}
+              style={{ padding:"9px 12px", border:`1.5px solid ${C.fog}`, borderRadius:R.md,
+                fontSize:13, outline:"none", background:C.white }}>
+              <option value={150}>150px (Small)</option>
+              <option value={200}>200px (Standard)</option>
+              <option value={250}>250px (Large)</option>
+              <option value={300}>300px (Extra Large)</option>
+            </select>
+          </div>
+
+          <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+            <label style={{ fontSize:12, fontWeight:600, color:C.slate }}>Template</label>
+            <select value={template} onChange={e => setTemplate(e.target.value)}
+              style={{ padding:"9px 12px", border:`1.5px solid ${C.fog}`, borderRadius:R.md,
+                fontSize:13, outline:"none", background:C.white }}>
+              {Object.entries(templates).map(([k, v]) => (
+                <option key={k} value={k}>{v.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+            <label style={{ fontSize:12, fontWeight:600, color:C.slate }}>Grid Columns</label>
+            <select value={gridColumns} onChange={e => setGridColumns(Number(e.target.value))}
+              style={{ padding:"9px 12px", border:`1.5px solid ${C.fog}`, borderRadius:R.md,
+                fontSize:13, outline:"none", background:C.white }}>
+              <option value={3}>3 Columns</option>
+              <option value={4}>4 Columns</option>
+              <option value={5}>5 Columns</option>
+              <option value={6}>6 Columns</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Row 2: Colors */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12, marginBottom:16 }}>
           <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
             <label style={{ fontSize:12, fontWeight:600, color:C.slate }}>QR Color</label>
             <div style={{ display:"flex", gap:8, alignItems:"center" }}>
               <input type="color" value={qrStyle.color} onChange={e=>setQrStyle({...qrStyle,color:e.target.value})}
                 style={{ width:40, height:36, borderRadius:R.sm, border:`1px solid ${C.fog}`, cursor:"pointer" }}/>
-              <span style={{ fontSize:12, color:C.mist }}>{qrStyle.color}</span>
+              <span style={{ fontSize:11, color:C.mist, wordBreak:"break-all" }}>{qrStyle.color}</span>
             </div>
           </div>
+
           <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
             <label style={{ fontSize:12, fontWeight:600, color:C.slate }}>Background</label>
             <div style={{ display:"flex", gap:8, alignItems:"center" }}>
               <input type="color" value={qrStyle.bg} onChange={e=>setQrStyle({...qrStyle,bg:e.target.value})}
                 style={{ width:40, height:36, borderRadius:R.sm, border:`1px solid ${C.fog}`, cursor:"pointer" }}/>
-              <span style={{ fontSize:12, color:C.mist }}>{qrStyle.bg}</span>
+              <span style={{ fontSize:11, color:C.mist, wordBreak:"break-all" }}>{qrStyle.bg}</span>
             </div>
           </div>
         </div>
 
-        <div style={{ background:C.fog, borderRadius:R.lg, padding:"12px 16px", marginBottom:16 }}>
-          <div style={{ fontSize:13, color:C.ink, fontWeight:600 }}>
-            {filtered.length} member{filtered.length!==1?"s":""} selected
-          </div>
-          <div style={{ fontSize:12, color:C.mist }}>
-            Opens a printable page with all QR codes in a 4-column grid (A4 ready)
-          </div>
+        {/* Labels Configuration */}
+        <div style={{ marginBottom:16 }}>
+          <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", marginBottom:10 }}>
+            <input type="checkbox" checked={showLabels} onChange={e => setShowLabels(e.target.checked)}
+              style={{ width:16, height:16, cursor:"pointer" }}/>
+            <span style={{ fontSize:12, fontWeight:600, color:C.slate }}>Show Labels</span>
+          </label>
+          {showLabels && (
+            <div style={{ display:"flex", gap:12, marginLeft:24, flexWrap:"wrap" }}>
+              {["name", "member_code", "branch"].map(field => (
+                <label key={field} style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer" }}>
+                  <input type="checkbox" checked={labelFields.includes(field)} 
+                    onChange={e => {
+                      if (e.target.checked) {
+                        setLabelFields([...labelFields, field]);
+                      } else {
+                        setLabelFields(labelFields.filter(f => f !== field));
+                      }
+                    }}
+                    style={{ width:14, height:14, cursor:"pointer" }}/>
+                  <span style={{ fontSize:11, color:C.slate, textTransform:"capitalize" }}>{field}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* ── Search & Filter ── */}
+      <Card style={{ marginBottom:16 }}>
+        <h3 style={{ margin:"0 0 12px", fontWeight:700, fontSize:14, color:C.ink }}>🔍 Find Members</h3>
+        <input type="text" placeholder="Search by name or member code..."
+          value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+          style={{ width:"100%", padding:"10px 14px", border:`1.5px solid ${C.cloud}`, borderRadius:R.md,
+            fontSize:13, outline:"none", boxSizing:"border-box" }}/>
+        
+        <div style={{ display:"flex", gap:8, marginTop:12, alignItems:"center" }}>
+          <span style={{ fontSize:12, color:C.slate, fontWeight:600 }}>
+            {filtered.length} members {selectedMembers.size > 0 ? `(${selectedMembers.size} selected)` : ""}
+          </span>
+          {filtered.length > 0 && (
+            <>
+              <button onClick={selectAll}
+                style={{ padding:"6px 12px", fontSize:11, background:C.blue3, color:C.blue,
+                  border:`1px solid ${C.blue}`, borderRadius:R.md, cursor:"pointer", fontWeight:600 }}>
+                Select All
+              </button>
+              {selectedMembers.size > 0 && (
+                <button onClick={clearSelection}
+                  style={{ padding:"6px 12px", fontSize:11, background:C.rose3, color:C.rose,
+                    border:`1px solid ${C.rose2}`, borderRadius:R.md, cursor:"pointer", fontWeight:600 }}>
+                  Clear
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </Card>
+
+      {/* ── Export Formats ── */}
+      <Card style={{ marginBottom:16 }}>
+        <h3 style={{ margin:"0 0 16px", fontWeight:700, fontSize:14, color:C.ink }}>📥 Export QR Codes</h3>
+
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))", gap:10, marginBottom:16 }}>
+          {[
+            { id: "print", label: "🖨️ Print/Web", fn: generatePrintView },
+            { id: "pdf", label: "📄 PDF", fn: exportPdf },
+            { id: "png", label: "🖼️ PNG Images", fn: () => downloadAsImages("PNG") },
+            { id: "email", label: "📧 Email", fn: sendViaEmail },
+          ].map(exp => (
+            <button key={exp.id} onClick={exp.fn} disabled={generating || filtered.length === 0}
+              style={{ padding:"10px", borderRadius:R.md, background:C.blue, color:C.white,
+                border:"none", fontWeight:600, fontSize:12, cursor:generating||filtered.length===0?"not-allowed":"pointer",
+                opacity:generating||filtered.length===0?0.6:1 }}>
+              {exp.label}
+            </button>
+          ))}
         </div>
 
         {generating && (
           <div style={{ marginBottom:16 }}>
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-              <span style={{ fontSize:12, color:C.slate }}>Generating QR codes…</span>
+              <span style={{ fontSize:12, color:C.slate }}>Generating…</span>
               <span style={{ fontSize:12, fontWeight:700, color:C.blue }}>{progress}%</span>
             </div>
             <div style={{ background:C.fog, borderRadius:R.full, height:8, overflow:"hidden" }}>
@@ -325,38 +754,42 @@ function BulkQRTab({ role, user, branches }) {
             </div>
           </div>
         )}
-
-        <button onClick={generateAll} disabled={generating || filtered.length === 0}
-          style={{ width:"100%", padding:"12px", borderRadius:R.full,
-            background: generating || filtered.length === 0 ? C.cloud : C.violet2,
-            color:C.white, border:"none", fontWeight:700, fontSize:14,
-            cursor: generating || filtered.length === 0 ? "not-allowed" : "pointer" }}>
-          {generating ? `Generating… ${progress}%` : `📦 Generate ${filtered.length} QR Codes`}
-        </button>
       </Card>
 
-      {/* Preview */}
-      <Card>
-        <h3 style={{ margin:"0 0 14px", fontWeight:700, fontSize:14, color:C.ink }}>
-          Members ({filtered.length})
-        </h3>
-        <div style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:400, overflowY:"auto" }}>
-          {filtered.map(m => (
-            <div key={m.id} style={{ display:"flex", alignItems:"center", gap:12,
-              padding:"8px 12px", background:C.fog, borderRadius:R.lg }}>
-              <div style={{ width:32, height:32, borderRadius:"50%", background:C.violet3,
-                display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:12, fontWeight:700, color:C.violet2, flexShrink:0 }}>
-                {m.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}
+      {/* ── Members List ── */}
+      {filtered.length > 0 && (
+        <Card>
+          <h3 style={{ margin:"0 0 12px", fontWeight:700, fontSize:14, color:C.ink }}>
+            👥 Members ({filtered.length})
+          </h3>
+          <div style={{ display:"flex", flexDirection:"column", gap:6, maxHeight:500, overflowY:"auto" }}>
+            {filtered.map(m => (
+              <div key={m.id} onClick={() => toggleMemberSelection(m.id)}
+                style={{ display:"flex", alignItems:"center", gap:12,
+                  padding:"10px 12px", background: selectedMembers.has(m.id) ? C.blue3 : C.fog,
+                  borderRadius:R.lg, cursor:"pointer", border: selectedMembers.has(m.id) ? `1.5px solid ${C.blue}` : "none" }}>
+                <div style={{ width:18, height:18, borderRadius:4, background:C.white, border:`1.5px solid ${selectedMembers.has(m.id)?C.blue:C.cloud}`,
+                  display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  {selectedMembers.has(m.id) && <span style={{ color:C.blue, fontSize:12, fontWeight:700 }}>✓</span>}
+                </div>
+                <div style={{ width:32, height:32, borderRadius:"50%", background:C.violet3,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:11, fontWeight:700, color:C.violet2, flexShrink:0 }}>
+                  {m.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:C.ink }}>{m.name}</div>
+                  <div style={{ fontSize:11, color:C.mist }}>{m.member_code} • {m.branches?.name}</div>
+                </div>
               </div>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:13, fontWeight:600, color:C.ink }}>{m.name}</div>
-                <div style={{ fontSize:11, color:C.mist }}>{m.member_code} · {m.branches?.name}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {toast && (
+        <Toast msg={toast.msg} type={toast.type} onDone={() => setToast(null)}/>
+      )}
     </div>
   );
 }
@@ -387,9 +820,9 @@ export default function QRGeneratorPage({ role, user }) {
   const [timeLeft,    setTimeLeft]    = useState("");
 
   // Reopen modal state
-  const [tab, setTab] = useState("live");
   const [reopenRow,  setReopenRow]  = useState(null);
   const [reopenOpen, setReopenOpen] = useState(false);
+  const [tab, setTab] = useState("live");
 
   const notify = (msg, type="success") => setToast({ msg, type });
 
