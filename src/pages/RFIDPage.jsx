@@ -147,7 +147,7 @@ function RFIDScanner({ user, role, setToast }) {
       .from("attendance")
       .select("id")
       .eq("member_id", member.id)
-      .eq("date", today)
+      .eq("service_date", today)
       .maybeSingle();
 
     if (existing) {
@@ -161,9 +161,8 @@ function RFIDScanner({ user, role, setToast }) {
     // Mark attendance
     const { error: attError } = await supabase.from("attendance").insert([{
       member_id: member.id,
-      date: today,
-      status: "present",
-      method: "rfid",
+      service_date: today,
+      present: true,
     }]);
 
     if (attError) {
