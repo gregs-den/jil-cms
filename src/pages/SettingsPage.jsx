@@ -1302,7 +1302,7 @@ export default function SettingsPage({ role }) {
     { key:"monthly-theme",     I:Ico.calendar, label:"Monthly Theme",      desc:"Upload the banner shown on dashboard and login", color:C.amber },
     { key:"app-settings",      I:Ico.settings, label:"App Settings",       desc:"Church name, address, contact info",            color:C.slate },
     { key:"birthdate-audit",   I:Ico.cake,     label:"Birthdate Audit",    desc:"Temporary — track & download birthdate updates", color:C.amber },
-  ];
+  ].filter(s => role === "superadmin" || s.key === "birthdate-audit");
 
   if (subPage === "users")              return <div><BackBtn onClick={()=>setSubPage(null)}/><UserManagementPage role={role}/></div>;
   if (subPage === "branches")           return <div><BackBtn onClick={()=>setSubPage(null)}/><BranchesPage/></div>;

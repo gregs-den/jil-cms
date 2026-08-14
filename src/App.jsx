@@ -830,8 +830,9 @@ const MENUS = {
     {id:"announcements",  label:"Announcements",  I:Ico.bell},   
     {id:"qr",             label:"QR Generator",   I:Ico.qr},
     {id:"scanner",        label:"QR Scanner",     I:Ico.scan},
-    {id:"rfid",           label:"RFID",           I:Ico.rfid },  
+    {id:"rfid",           label:"RFID",           I:Ico.rfid },
     {id:"prayer",         label:"Prayer Requests", I:Ico.prayer},
+    {id:"settings",       label:"Settings",       I:Ico.settings},
  ],
 superadmin: [
   {id:"dashboard",        label:"Dashboard",      I:Ico.home},
