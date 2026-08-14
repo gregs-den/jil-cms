@@ -190,6 +190,8 @@ const Ico = {
   plus:     (p)=><SVG {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></SVG>,
   check:    (p)=><SVG {...p}><polyline points="20 6 9 17 4 12"/></SVG>,
   chevronR: (p)=><SVG {...p}><polyline points="9 18 15 12 9 6"/></SVG>,
+  cake:     (p)=><SVG {...p}><path d="M4 20v-6a2 2 0 012-2h12a2 2 0 012 2v6"/><path d="M4 20h16"/><path d="M2 20h20"/><path d="M8 12V9a2 2 0 114 0v3M12 12V9a2 2 0 114 0v3"/><path d="M10 4v1M14 4v1"/></SVG>,
+  download: (p)=><SVG {...p}><polyline points="21 15 16 20 11 15"/><line x1="16" y1="4" x2="16" y2="20"/></SVG>,
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -1108,6 +1110,181 @@ const AppSettingsPage = () => {
 };
 
 /* ═══════════════════════════════════════════════════════════
+   BIRTHDATE AUDIT (temporary)
+═══════════════════════════════════════════════════════════ */
+const BirthdateAuditPage = () => {
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterBranch, setFilterBranch] = useState("All");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      let all = [], from = 0;
+      while (true) {
+        const { data, error } = await supabase.from("members")
+          .select("id, name, birthdate, branch")
+          .order("name", { ascending: true }).range(from, from + 999);
+        if (error || !data || data.length === 0) break;
+        all = [...all, ...data];
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+      setMembers(all);
+      setLoading(false);
+    };
+    fetchAll();
+  }, []);
+
+  const branches = [...new Set(members.map(m => m.branch || "—"))].sort();
+
+  const withStatus = members.map(m => ({ ...m, updated: !!m.birthdate }));
+  const updatedCount = withStatus.filter(m => m.updated).length;
+  const missingCount = withStatus.length - updatedCount;
+  const pct = withStatus.length ? Math.round((updatedCount / withStatus.length) * 100) : 0;
+
+  const perBranch = branches.map(b => {
+    const rows = withStatus.filter(m => (m.branch || "—") === b);
+    const upd = rows.filter(m => m.updated).length;
+    return { branch: b, total: rows.length, updated: upd, missing: rows.length - upd };
+  });
+
+  const filtered = withStatus.filter(m => {
+    const matchStatus = filterStatus === "all" || (filterStatus === "updated" ? m.updated : !m.updated);
+    const matchBranch = filterBranch === "All" || (m.branch || "—") === filterBranch;
+    const matchSearch = (m.name || "").toLowerCase().includes(search.toLowerCase());
+    return matchStatus && matchBranch && matchSearch;
+  });
+
+  const downloadCSV = () => {
+    const rows = filterBranch === "All" ? filtered : filtered.filter(m => (m.branch || "—") === filterBranch);
+    const csv = ["Name,Birthdate,Branch",
+      ...rows.map(m => `"${(m.name||"").replace(/"/g,'""')}","${m.birthdate||""}","${(m.branch||"—").replace(/"/g,'""')}"`)
+    ].join("\n");
+    const blob = new Blob([csv], { type:"text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    const branchLabel = filterBranch === "All" ? "all-branches" : filterBranch.replace(/[^a-z0-9]+/gi,"-").toLowerCase();
+    a.download = `birthdates-${branchLabel}.csv`;
+    a.click();
+  };
+
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6, flexWrap:"wrap", gap:10 }}>
+        <h2 style={{ margin:0, fontWeight:800, fontSize:20, color:C.ink }}>Birthdate Audit</h2>
+        <Badge label="Temporary" color={C.amber}/>
+      </div>
+      <p style={{ fontSize:12, color:C.mist, margin:"0 0 18px" }}>
+        Tracks which members have filled in their birthdate vs. still missing it, and lets you download Name + Birthdate lists per branch.
+      </p>
+
+      {loading ? (
+        <div style={{ textAlign:"center", padding:"40px 0", color:C.mist }}>Loading members…</div>
+      ) : (
+        <>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))", gap:10, marginBottom:16 }}>
+            <Card style={{ padding:"14px 16px" }}>
+              <div style={{ fontSize:11, color:C.mist, fontWeight:600 }}>Total Members</div>
+              <div style={{ fontSize:22, fontWeight:800, color:C.ink }}>{withStatus.length}</div>
+            </Card>
+            <Card style={{ padding:"14px 16px" }}>
+              <div style={{ fontSize:11, color:C.mist, fontWeight:600 }}>Updated</div>
+              <div style={{ fontSize:22, fontWeight:800, color:C.green }}>{updatedCount}</div>
+            </Card>
+            <Card style={{ padding:"14px 16px" }}>
+              <div style={{ fontSize:11, color:C.mist, fontWeight:600 }}>Missing</div>
+              <div style={{ fontSize:22, fontWeight:800, color:C.rose2 }}>{missingCount}</div>
+            </Card>
+            <Card style={{ padding:"14px 16px" }}>
+              <div style={{ fontSize:11, color:C.mist, fontWeight:600 }}>% Complete</div>
+              <div style={{ fontSize:22, fontWeight:800, color:C.blue }}>{pct}%</div>
+            </Card>
+          </div>
+
+          <Card style={{ padding:0, overflow:"hidden", marginBottom:16 }}>
+            <div style={{ overflowX:"auto" }}>
+              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+                <thead>
+                  <tr style={{ background:C.fog }}>
+                    {["Branch","Total","Updated","Missing","% Complete"].map(h=>(
+                      <th key={h} style={{ textAlign:"left", padding:"9px 14px", color:C.slate, fontWeight:600, fontSize:11, textTransform:"uppercase", letterSpacing:.4, whiteSpace:"nowrap" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {perBranch.map(b => (
+                    <tr key={b.branch} style={{ borderTop:`1px solid ${C.fog}` }}>
+                      <td style={{ padding:"9px 14px", fontWeight:600, color:C.ink }}>{b.branch}</td>
+                      <td style={{ padding:"9px 14px", color:C.slate }}>{b.total}</td>
+                      <td style={{ padding:"9px 14px", color:C.green, fontWeight:600 }}>{b.updated}</td>
+                      <td style={{ padding:"9px 14px", color:C.rose2, fontWeight:600 }}>{b.missing}</td>
+                      <td style={{ padding:"9px 14px", color:C.slate }}>{b.total ? Math.round((b.updated/b.total)*100) : 0}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center", marginBottom:12 }}>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name…"
+              style={{ flex:"1 1 200px", padding:"9px 14px", borderRadius:R.full, border:`1.5px solid ${C.cloud}`,
+                fontSize:13, outline:"none", color:C.ink, boxSizing:"border-box" }}/>
+            <Btn label="Download CSV" icon={Ico.download} onClick={downloadCSV} sm/>
+          </div>
+
+          <div style={{ display:"flex", gap:6, marginBottom:10, flexWrap:"wrap" }}>
+            {[
+              { key:"all",     label:`All (${withStatus.length})` },
+              { key:"updated", label:`Updated (${updatedCount})`, color:C.green },
+              { key:"missing", label:`Missing (${missingCount})`, color:C.rose2 },
+            ].map(f=>(
+              <Pill key={f.key} label={f.label} active={filterStatus===f.key}
+                onClick={()=>setFilterStatus(f.key)} color={f.color||C.blue}/>
+            ))}
+          </div>
+          <div style={{ display:"flex", gap:6, marginBottom:16, flexWrap:"wrap" }}>
+            {["All",...branches].map(b=>(
+              <Pill key={b} label={b} active={filterBranch===b} onClick={()=>setFilterBranch(b)} color={C.violet2}/>
+            ))}
+          </div>
+
+          <Card style={{ padding:0, overflow:"hidden" }}>
+            <div style={{ overflowX:"auto", maxHeight:480 }}>
+              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+                <thead>
+                  <tr style={{ background:C.fog }}>
+                    {["Name","Branch","Birthdate","Status"].map(h=>(
+                      <th key={h} style={{ textAlign:"left", padding:"9px 14px", color:C.slate, fontWeight:600, fontSize:11, textTransform:"uppercase", letterSpacing:.4, whiteSpace:"nowrap", position:"sticky", top:0, background:C.fog }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.length === 0 ? (
+                    <tr><td colSpan={4} style={{ padding:"28px 16px", textAlign:"center", color:C.mist }}>No members match.</td></tr>
+                  ) : filtered.map(m => (
+                    <tr key={m.id} style={{ borderTop:`1px solid ${C.fog}` }}>
+                      <td style={{ padding:"9px 14px", color:C.ink, fontWeight:500 }}>{m.name}</td>
+                      <td style={{ padding:"9px 14px", color:C.slate, fontSize:12 }}>{m.branch||"—"}</td>
+                      <td style={{ padding:"9px 14px", color:C.slate }}>{m.birthdate||"—"}</td>
+                      <td style={{ padding:"9px 14px" }}>
+                        <Badge label={m.updated?"Updated":"Missing"} color={m.updated?C.green:C.rose2}/>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </>
+      )}
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════
    SETTINGS PAGE (main entry point)
 ═══════════════════════════════════════════════════════════ */
 export default function SettingsPage({ role }) {
@@ -1120,6 +1297,7 @@ export default function SettingsPage({ role }) {
     { key:"audit-log",         I:Ico.report,   label:"Audit Log",          desc:"Track who did what and when",                   color:C.violet2 },
     { key:"monthly-theme",     I:Ico.calendar, label:"Monthly Theme",      desc:"Upload the banner shown on dashboard and login", color:C.amber },
     { key:"app-settings",      I:Ico.settings, label:"App Settings",       desc:"Church name, address, contact info",            color:C.slate },
+    { key:"birthdate-audit",   I:Ico.cake,     label:"Birthdate Audit",    desc:"Temporary — track & download birthdate updates", color:C.amber },
   ];
 
   if (subPage === "users")              return <div><BackBtn onClick={()=>setSubPage(null)}/><UserManagementPage role={role}/></div>;
@@ -1128,6 +1306,7 @@ export default function SettingsPage({ role }) {
   if (subPage === "audit-log")          return <div><BackBtn onClick={()=>setSubPage(null)}/><AuditLogPage/></div>;
   if (subPage === "monthly-theme")      return <div><BackBtn onClick={()=>setSubPage(null)}/><MonthlyThemePage/></div>;
   if (subPage === "app-settings")       return <div><BackBtn onClick={()=>setSubPage(null)}/><AppSettingsPage/></div>;
+  if (subPage === "birthdate-audit")    return <div><BackBtn onClick={()=>setSubPage(null)}/><BirthdateAuditPage/></div>;
 
   return (
     <div>
