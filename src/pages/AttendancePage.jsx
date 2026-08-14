@@ -578,7 +578,7 @@ const ServiceReport = ({ serviceReports, mob }) => (
               <span style={{ color:C.slate }}>Total</span>
               <span style={{ color:C.ink, fontWeight:700 }}>{report.total}</span>
             </div>
-            {["Kids","Youth","Young Adult","Men","Women","Senior Women","Senior Men"].map(type => (
+            {["Kids","Youth","Young Adult","Men","Women"].map(type => (
               report[type] > 0 && (
                 <div key={type} style={{ display:"flex", justifyContent:"space-between", fontSize:12 }}>
                   <span style={{ color:C.slate }}>{type}</span>
@@ -935,7 +935,7 @@ export default function AttendancePage({ role, user }) {
       if (!byService[key]) byService[key] = {
         event: r.event||"—", date: r.date,
         total: 0,
-        Kids:0, Youth:0, "Young Adult":0, Men:0, Women:0, "Senior Women":0, "Senior Men":0, "—":0,
+        Kids:0, Youth:0, "Young Adult":0, Men:0, Women:0, "—":0,
       };
       byService[key].total += 1;
       const t = r.type || "—";
