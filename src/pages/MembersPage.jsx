@@ -332,6 +332,8 @@ export default function MembersPage({ role, user }) {
   return gender === "Female" ? "Senior Women" : "Senior Men";
   };
 
+  const liveType = m => autoType(m.birthdate, m.gender) || m.type;
+
   const genCode = () => "JIL-" + String(Date.now()) + Math.floor(Math.random()*1000);
   const catColor = c =>
   c==="WSAM"        ? C.blue   :
@@ -453,7 +455,7 @@ export default function MembersPage({ role, user }) {
       birthdate:        m.birthdate || "",
       address:          m.address || "",
       category:         m.category || "Official Member",
-      type:             m.type || "Young Adult",
+      type:             liveType(m) || "Young Adult",
       branch:           m.branch || "",
       branch_id:        m.branch_id || "",
       lifegroup_leader: m.lifegroup_leader || "",
@@ -591,7 +593,7 @@ export default function MembersPage({ role, user }) {
       (m.address||"").toLowerCase().includes(q) ||
       (m.branch||"").toLowerCase().includes(q);
     const matchCat    = filterCat==="All"    || m.category===filterCat;
-    const matchType   = filterType==="All"   || m.type===filterType;
+    const matchType   = filterType==="All"   || liveType(m)===filterType;
     const matchStatus = filterStatus==="All" || m.status === filterStatus;
     const matchBranch = filterBranch==="All" || m.branch === filterBranch;
     return matchSearch && matchCat && matchType && matchStatus && matchBranch;
@@ -712,7 +714,7 @@ export default function MembersPage({ role, user }) {
                           {m.name}
                         </div>
                         <div style={{ fontSize:11, color:C.mist }}>
-                          {m.type} · {(m.branch||"").split("–")[0].trim()}
+                          {liveType(m)} · {(m.branch||"").split("–")[0].trim()}
                         </div>
                       </div>
                       <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
@@ -811,7 +813,7 @@ export default function MembersPage({ role, user }) {
                           <td style={{ padding:"10px 14px" }}>
                             <Badge label={m.category} color={catColor(m.category)}/>
                           </td>
-                          <td style={{ padding:"10px 14px", color:C.slate }}>{m.type}</td>
+                          <td style={{ padding:"10px 14px", color:C.slate }}>{liveType(m)}</td>
                           <td style={{ padding:"10px 14px", color:C.slate, fontSize:12 }}>
                             {(m.branch||"").split("–")[0].trim()}
                           </td>
