@@ -402,6 +402,8 @@ export default function MembersPage({ role, user }) {
   const save = async () => {
   if (!form.name.trim()) { notify("Name is required", "warn"); return; }
   setSaving(true);
+  const original = editId ? members.find(m => m.id === editId) : null;
+  const birthdateChanged = (form.birthdate || null) !== (original?.birthdate || null);
   const payload = {
     name:             form.name.trim(),
     birthdate:        form.birthdate || null,
@@ -412,6 +414,7 @@ export default function MembersPage({ role, user }) {
     branch:           form.branch,
     branch_id:        form.branch_id || null,
     lifegroup_leader: form.lifegroup_leader.trim(),
+    ...(birthdateChanged ? { birthdate_updated_at: form.birthdate ? new Date().toISOString() : null } : {}),
   };
 
   if (editId) {

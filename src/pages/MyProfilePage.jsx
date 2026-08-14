@@ -134,12 +134,15 @@ export default function MyProfilePage({ user }) {
     if (!user?.memberId) return;
     setSaving(true);
 
+    const birthdateChanged = (form.birthdate || null) !== (member?.birthdate || null);
+
     const { error } = await supabase.from("members").update({
       phone: form.phone || null,
       email: form.email || null,
       address: form.address || null,
       photo_url: form.photo_url || null,
       birthdate: form.birthdate || null,
+      ...(birthdateChanged ? { birthdate_updated_at: form.birthdate ? new Date().toISOString() : null } : {}),
     }).eq("id", user.memberId);
 
     if (error) {

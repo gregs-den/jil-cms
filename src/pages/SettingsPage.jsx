@@ -1124,7 +1124,7 @@ const BirthdateAuditPage = () => {
       let all = [], from = 0;
       while (true) {
         const { data, error } = await supabase.from("members")
-          .select("id, name, birthdate, branch")
+          .select("id, name, birthdate, branch, birthdate_updated_at")
           .order("name", { ascending: true }).range(from, from + 999);
         if (error || !data || data.length === 0) break;
         all = [...all, ...data];
@@ -1139,7 +1139,7 @@ const BirthdateAuditPage = () => {
 
   const branches = [...new Set(members.map(m => m.branch || "—"))].sort();
 
-  const withStatus = members.map(m => ({ ...m, updated: !!m.birthdate }));
+  const withStatus = members.map(m => ({ ...m, updated: !!m.birthdate_updated_at }));
   const updatedCount = withStatus.filter(m => m.updated).length;
   const missingCount = withStatus.length - updatedCount;
   const pct = withStatus.length ? Math.round((updatedCount / withStatus.length) * 100) : 0;
@@ -1177,7 +1177,8 @@ const BirthdateAuditPage = () => {
         <Badge label="Temporary" color={C.amber}/>
       </div>
       <p style={{ fontSize:12, color:C.mist, margin:"0 0 18px" }}>
-        Tracks which members have filled in their birthdate vs. still missing it, and lets you download Name + Birthdate lists per branch.
+        "Updated" means the member's birthdate was actually confirmed/saved through the app (Members admin form or My Profile) —
+        old imported birthdates are treated as unverified guesses until someone re-saves them. Download Name + Birthdate lists per branch below.
       </p>
 
       {loading ? (
@@ -1194,7 +1195,7 @@ const BirthdateAuditPage = () => {
               <div style={{ fontSize:22, fontWeight:800, color:C.green }}>{updatedCount}</div>
             </Card>
             <Card style={{ padding:"14px 16px" }}>
-              <div style={{ fontSize:11, color:C.mist, fontWeight:600 }}>Missing</div>
+              <div style={{ fontSize:11, color:C.mist, fontWeight:600 }}>Not Updated</div>
               <div style={{ fontSize:22, fontWeight:800, color:C.rose2 }}>{missingCount}</div>
             </Card>
             <Card style={{ padding:"14px 16px" }}>
@@ -1208,7 +1209,7 @@ const BirthdateAuditPage = () => {
               <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
                 <thead>
                   <tr style={{ background:C.fog }}>
-                    {["Branch","Total","Updated","Missing","% Complete"].map(h=>(
+                    {["Branch","Total","Updated","Not Updated","% Complete"].map(h=>(
                       <th key={h} style={{ textAlign:"left", padding:"9px 14px", color:C.slate, fontWeight:600, fontSize:11, textTransform:"uppercase", letterSpacing:.4, whiteSpace:"nowrap" }}>{h}</th>
                     ))}
                   </tr>
@@ -1239,7 +1240,7 @@ const BirthdateAuditPage = () => {
             {[
               { key:"all",     label:`All (${withStatus.length})` },
               { key:"updated", label:`Updated (${updatedCount})`, color:C.green },
-              { key:"missing", label:`Missing (${missingCount})`, color:C.rose2 },
+              { key:"missing", label:`Not Updated (${missingCount})`, color:C.rose2 },
             ].map(f=>(
               <Pill key={f.key} label={f.label} active={filterStatus===f.key}
                 onClick={()=>setFilterStatus(f.key)} color={f.color||C.blue}/>
@@ -1256,21 +1257,24 @@ const BirthdateAuditPage = () => {
               <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
                 <thead>
                   <tr style={{ background:C.fog }}>
-                    {["Name","Branch","Birthdate","Status"].map(h=>(
+                    {["Name","Branch","Birthdate","Confirmed On","Status"].map(h=>(
                       <th key={h} style={{ textAlign:"left", padding:"9px 14px", color:C.slate, fontWeight:600, fontSize:11, textTransform:"uppercase", letterSpacing:.4, whiteSpace:"nowrap", position:"sticky", top:0, background:C.fog }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
-                    <tr><td colSpan={4} style={{ padding:"28px 16px", textAlign:"center", color:C.mist }}>No members match.</td></tr>
+                    <tr><td colSpan={5} style={{ padding:"28px 16px", textAlign:"center", color:C.mist }}>No members match.</td></tr>
                   ) : filtered.map(m => (
                     <tr key={m.id} style={{ borderTop:`1px solid ${C.fog}` }}>
                       <td style={{ padding:"9px 14px", color:C.ink, fontWeight:500 }}>{m.name}</td>
                       <td style={{ padding:"9px 14px", color:C.slate, fontSize:12 }}>{m.branch||"—"}</td>
                       <td style={{ padding:"9px 14px", color:C.slate }}>{m.birthdate||"—"}</td>
+                      <td style={{ padding:"9px 14px", color:C.slate, fontSize:12 }}>
+                        {m.birthdate_updated_at ? new Date(m.birthdate_updated_at).toLocaleDateString("en-PH",{month:"short",day:"numeric",year:"numeric"}) : "—"}
+                      </td>
                       <td style={{ padding:"9px 14px" }}>
-                        <Badge label={m.updated?"Updated":"Missing"} color={m.updated?C.green:C.rose2}/>
+                        <Badge label={m.updated?"Updated":"Not Updated"} color={m.updated?C.green:C.rose2}/>
                       </td>
                     </tr>
                   ))}
