@@ -227,13 +227,13 @@ const SH = {
 const BRANCHES = ["Main – Pinamalayan","Sta. Rita","Buli","Inclanay","Luma"];
 const FINANCE_TYPES = ["Tithes","Offering","Pledges","Mission","Support","iCare","First Fruit"];
 const CATEGORIES = ["WSAM","LGAM","WSAM/LGAM","First Timer","Guest"];
-const MEMBER_TYPES = ["Kids","Youth","Young Adult","Men","Women","Senior"];
+const MEMBER_TYPES = ["Kids","Youth","Young Adult","Men","Women","Senior Women","Senior Men"];
 
 const SEED_MEMBERS = [
   { id:1,  memberCode:"JIL-000001", name:"Maria Santos",      birthdate:"1990-03-15", age:35, address:"Sto. Tomas, Pinamalayan", category:"Official Member", type:"Women",       lifegroupLeader:"Ptr. Rico Cruz",   branch:"Main – Pinamalayan", points:580, attendance:97 },
   { id:2,  memberCode:"JIL-000002", name:"Juan dela Cruz",    birthdate:"1985-07-22", age:39, address:"Sta. Rita, Pinamalayan",  category:"Official Member", type:"Men",         lifegroupLeader:"Dea. Ana Reyes",   branch:"Sta. Rita",          points:310, attendance:78 },
   { id:3,  memberCode:"JIL-000003", name:"Elena Reyes",       birthdate:"1998-11-05", age:26, address:"Buli, Pinamalayan",       category:"First Timer",     type:"Young Adult", lifegroupLeader:"Min. Beth Torres", branch:"Buli",               points:420, attendance:88 },
-  { id:4,  memberCode:"JIL-000004", name:"Pedro Ramos",       birthdate:"1972-01-30", age:53, address:"Inclanay, Pinamalayan",   category:"Official Member", type:"Senior",      lifegroupLeader:"Ptr. Rico Cruz",   branch:"Inclanay",           points:110, attendance:40 },
+  { id:4,  memberCode:"JIL-000004", name:"Pedro Ramos",       birthdate:"1972-01-30", age:53, address:"Inclanay, Pinamalayan",   category:"Official Member", type:"Senior Men",  lifegroupLeader:"Ptr. Rico Cruz",   branch:"Inclanay",           points:110, attendance:40 },
   { id:5,  memberCode:"JIL-000005", name:"Liza Gomez",        birthdate:"2002-08-14", age:22, address:"Luma, Pinamalayan",       category:"Guest",           type:"Youth",       lifegroupLeader:"Dea. Ana Reyes",   branch:"Luma",               points:490, attendance:92 },
   { id:6,  memberCode:"JIL-000006", name:"Carlo Mendoza",     birthdate:"2012-05-20", age:13, address:"Pinamalayan Proper",      category:"Official Member", type:"Kids",        lifegroupLeader:"Ptr. Rico Cruz",   branch:"Main – Pinamalayan", points:200, attendance:85 },
 ];

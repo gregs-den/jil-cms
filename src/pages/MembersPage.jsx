@@ -16,7 +16,7 @@ const R = { xs:"6px", sm:"10px", md:"14px", lg:"18px", xl:"24px", xxl:"32px", fu
 const SH = { sm:"0 2px 8px rgba(0,0,0,.07)", md:"0 4px 20px rgba(0,0,0,.09)" };
 
 const CATEGORIES = ["WSAM","LGAM","WSAM/LGAM","First Timer","Guest"];
-const MEMBER_TYPES = ["Kids","Youth","Young Adult","Men","Women","Senior"];
+const MEMBER_TYPES = ["Kids","Youth","Young Adult","Men","Women","Senior Women","Senior Men"];
 
 const SHEETJS_CDN = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
 const loadScript = (src) => new Promise((resolve, reject) => {
@@ -329,7 +329,7 @@ export default function MembersPage({ role, user }) {
   if (age <= 24)  return "Youth";
   if (age <= 35)  return "Young Adult";
   if (age <= 59)  return gender === "Female" ? "Women" : "Men";
-  return "Senior";
+  return gender === "Female" ? "Senior Women" : "Senior Men";
   };
 
   const genCode = () => "JIL-" + String(Date.now()) + Math.floor(Math.random()*1000);
