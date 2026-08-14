@@ -78,6 +78,7 @@ export default function MyProfilePage({ user }) {
     email: "",
     address: "",
     photo_url: "",
+    birthdate: "",
   });
 
   useEffect(() => {
@@ -102,6 +103,7 @@ export default function MyProfilePage({ user }) {
         email: data.email || "",
         address: data.address || "",
         photo_url: data.photo_url || "",
+        birthdate: data.birthdate || "",
       });
     }
     setLoading(false);
@@ -137,6 +139,7 @@ export default function MyProfilePage({ user }) {
       email: form.email || null,
       address: form.address || null,
       photo_url: form.photo_url || null,
+      birthdate: form.birthdate || null,
     }).eq("id", user.memberId);
 
     if (error) {
@@ -213,7 +216,6 @@ export default function MyProfilePage({ user }) {
             { label:"Member Code", value:member.member_code },
             { label:"Branch", value:member.branches?.name },
             { label:"Status", value:member.is_active ? "Active" : "Inactive" },
-            { label:"Birthdate", value:member.birthdate ? new Date(member.birthdate).toLocaleDateString("en-PH", { month:"long", day:"numeric", year:"numeric" }) : "—" },
           ].map(({ label, value }) => (
             <div key={label}>
               <div style={{ fontSize:11, color:C.mist, fontWeight:600, marginBottom:2 }}>{label}</div>
@@ -226,6 +228,7 @@ export default function MyProfilePage({ user }) {
       {/* Editable Info */}
       <Card>
         <h3 style={{ margin:"0 0 16px", fontWeight:700, fontSize:14, color:C.ink }}>Contact Information</h3>
+        <Inp label="Birthdate" type="date" value={form.birthdate} onChange={v=>setForm({...form,birthdate:v})}/>
         <Inp label="Phone Number" value={form.phone} onChange={v=>setForm({...form,phone:v})}
           placeholder="e.g. 09XX-XXX-XXXX" type="tel"/>
         <Inp label="Email Address" value={form.email} onChange={v=>setForm({...form,email:v})}
