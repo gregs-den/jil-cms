@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { applyAttendanceCategoryRules } from "../lib/categoryTransfer";
 
 const C = {
   ink:"#0A0F1E", ink2:"#1C2336",
@@ -173,6 +174,7 @@ function RFIDScanner({ user, role, setToast }) {
       setLastScan(scan);
       setRecentScans(prev => [scan, ...prev].slice(0, 10));
       setToast({ msg: `✅ ${member.name} marked present!`, type: "success" });
+      applyAttendanceCategoryRules(member.id);
     }
 
     setUid("");

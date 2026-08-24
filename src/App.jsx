@@ -5,6 +5,7 @@ import MembersPage from './pages/MembersPage'
 import QRGeneratorPage from './pages/QRGeneratorPage'
 import QRCode from "qrcode";
 import { supabase } from "./lib/supabaseClient";
+import { applyAttendanceCategoryRules } from "./lib/categoryTransfer";
 import MyAttendancePage from './pages/MyAttendancePage';
 import AttendancePage from './pages/AttendancePage';
 import ReportsPage from "./pages/ReportsPage";
@@ -14,6 +15,7 @@ import AnnouncementPage from './pages/AnnouncementPage';
 import SettingsPage from './pages/SettingsPage';
 import MyProfilePage from './pages/MyProfilePage';
 import RFIDPage from "./pages/RFIDPage";
+import LifeGroupPage from "./pages/LifeGroupPage";
 
 /* ════════════════════════════════════════════════════════════
    BRANCH HIERARCHY & ACCESS CONTROL
@@ -37,6 +39,9 @@ const BRANCH_HIERARCHY = {
   "Pier": { label: "Pier", isParent: false, subBranches: [], parent: "Main – Pinamalayan" },
 };
 
+// lg_leader gets the same self-service scope as a regular member, plus Life Group.
+const isSelfServiceRole = role => role === "regular" || role === "lg_leader";
+
 const getAccessibleBranches = (role, userBranch) => {
   if (role === "superadmin") {
     return Object.keys(BRANCH_HIERARCHY).filter(b => !BRANCH_HIERARCHY[b].parent);
@@ -49,7 +54,7 @@ const getAccessibleBranches = (role, userBranch) => {
     }
     return [userBranch];
   }
-  if (role === "member" || role === "regular") {
+  if (role === "member" || isSelfServiceRole(role)) {
     return [userBranch];
   }
   return [];
@@ -144,7 +149,7 @@ const renderPage = () => {
   switch(page) {
     case "myprofile":     return <MyProfilePage role={role} user={user}/>;
     case "dashboard":     return <Dashboard       role={role} user={user}/>;
-    case "attendance": return role === "regular"
+    case "attendance": return isSelfServiceRole(role)
       ? <MyAttendancePage />
       : <AttendancePage role={role} user={user}/>;
     case "finance":       return <FinancePage role={role} user={user}/>;
@@ -155,6 +160,7 @@ const renderPage = () => {
     case "myqr":          return <MyQRPage        user={user}/>;
     case "scanner":       return <ScannerPage     role={role}/>;
     case "rfid":          return <RFIDPage role={role} user={user}/>;
+    case "lifegroup":     return <LifeGroupPage role={role} user={user}/>;
     case "prayer":        return <PrayerPage role={role} user={user} createNotification={createNotification}/>;
     case "settings":      return <SettingsPage role={role}/>;
     default:              return <Dashboard       role={role} user={user}/>;
@@ -201,7 +207,7 @@ const renderPage = () => {
         collapsed={collapsed} setCollapsed={setCollapsed}
         mobile={mob} setShowMob={setShowMob} setPage={setPage}/>
 
-        {role==="regular" && <GamStrip user={user}/>}
+        {isSelfServiceRole(role) && <GamStrip user={user}/>}
 
           <div style={{ flex:1, overflowY:"auto", padding: mob?"16px":"24px 28px",
             background: `${churchColor}15`,
@@ -226,7 +232,7 @@ const SH = {
 ═══════════════════════════════════════════════════════════ */
 const BRANCHES = ["Main – Pinamalayan","Sta. Rita","Buli","Inclanay","Luma"];
 const FINANCE_TYPES = ["Tithes","Offering","Pledges","Mission","Support","iCare","First Fruit"];
-const CATEGORIES = ["WSAM","LGAM","WSAM/LGAM","First Timer","Guest"];
+const CATEGORIES = ["WSAM","LGAM","WSAM/LGAM","First Timer","Attendees","Guest"];
 const MEMBER_TYPES = ["Kids","Youth","Young Adult","Men","Women"];
 
 const SEED_MEMBERS = [
@@ -825,9 +831,10 @@ const MENUS = {
     {id:"dashboard",      label:"Dashboard",      I:Ico.home},
     {id:"members",        label:"Members",        I:Ico.users},
     {id:"attendance",     label:"Attendance",     I:Ico.attendance},
+    {id:"lifegroup",      label:"Life Group",     I:Ico.tree},
     {id:"finance",        label:"Finance",        I:Ico.finance},
     {id:"reports",        label:"Reports",        I:Ico.report},
-    {id:"announcements",  label:"Announcements",  I:Ico.bell},   
+    {id:"announcements",  label:"Announcements",  I:Ico.bell},
     {id:"qr",             label:"QR Generator",   I:Ico.qr},
     {id:"scanner",        label:"QR Scanner",     I:Ico.scan},
     {id:"rfid",           label:"RFID",           I:Ico.rfid },
@@ -838,21 +845,31 @@ superadmin: [
   {id:"dashboard",        label:"Dashboard",      I:Ico.home},
   {id:"members",          label:"Members",        I:Ico.users},
   {id:"attendance",       label:"Attendance",     I:Ico.attendance},
+  {id:"lifegroup",        label:"Life Group",     I:Ico.tree},
   {id:"finance",          label:"Finance",        I:Ico.finance},
   {id:"reports",          label:"Reports",        I:Ico.report},
-  {id:"announcements",    label:"Announcements",  I:Ico.bell},   
+  {id:"announcements",    label:"Announcements",  I:Ico.bell},
   {id:"qr",               label:"QR Generator",   I:Ico.qr},
   {id:"scanner",          label:"QR Scanner",     I:Ico.scan},
   {id:"rfid",             label:"RFID",           I:Ico.rfid },
   {id:"prayer",           label:"Prayer Requests", I:Ico.prayer},
   {id:"settings",         label:"Settings",       I:Ico.settings},
   ],
+  lg_leader: [
+    {id:"dashboard",      label:"Dashboard",      I:Ico.home},
+    {id:"attendance",     label:"Attendance",     I:Ico.attendance},
+    {id:"lifegroup",      label:"Life Group",     I:Ico.tree},
+    {id:"finance",        label:"My Finance",     I:Ico.finance},
+    {id:"myqr",           label:"My QR Code",     I:Ico.idcard},
+    {id:"prayer",         label:"Prayer",         I:Ico.prayer},
+  ],
 };
 
 const ROLE_TAG = {
-  regular:    {tag:"Member",   color:C.blue},
-  admin:      {tag:"Admin",    color:C.violet2},
-  superadmin: {tag:"Dev",      color:C.rose2},
+  regular:    {tag:"Member",     color:C.blue},
+  admin:      {tag:"Admin",      color:C.violet2},
+  superadmin: {tag:"Dev",        color:C.rose2},
+  lg_leader:  {tag:"LG Leader",  color:C.green2},
 };
 
 const Sidebar = ({ role, page, setPage, user, onLogout, collapsed, setCollapsed, mobile, showMob, setShowMob, logo, churchColor }) => {
@@ -1596,7 +1613,7 @@ const TAG_COLORS = {
 };
 
 const Dashboard = ({ role, user }) => {
-  const isAdmin = role !== "regular";
+  const isAdmin = !isSelfServiceRole(role);
   const total = FINANCE_DATA.reduce((a, f) => a + f.amount, 0);
   const mob = useIsMobile();
 
@@ -2258,7 +2275,7 @@ const AnnouncementsPage = ({ bg }) => {
 
 /* ── FINANCE ──────────────────────────── */
 const FinancePage = ({ role, user, bg }) => {
-  const isAdmin = role!=="regular";
+  const isAdmin = !isSelfServiceRole(role);
   const [tab, setTab] = useState("overview");
   const [form, setForm] = useState({ type:"Tithes", amount:"", note:"" });
   const [done, setDone] = useState(false);
@@ -2745,6 +2762,7 @@ const ScannerPage = ({ role }) => {
   await supabase.from("members")
     .update({ points: (member.points || 0) + 10 })
     .eq("id", member.id);
+  applyAttendanceCategoryRules(member.id);
 
     const logErr = await logAction(
     "attendance_recorded",

@@ -370,7 +370,7 @@ const UserManagementPage = ({ role }) => {
     logAction("user_role_changed", `${u.members?.name} → ${newRole}`, "user", u.id);
   };
 
-  const ROLE_COLORS = { superadmin:C.rose2, admin:C.violet2, regular:C.blue, deactivated:C.mist };
+  const ROLE_COLORS = { superadmin:C.rose2, admin:C.violet2, lg_leader:C.green2, regular:C.blue, deactivated:C.mist };
 
   const filtered = users.filter(u => {
     const matchSearch = u.members?.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -406,6 +406,7 @@ const UserManagementPage = ({ role }) => {
           { key:"all",        label:`All (${users.length})` },
           { key:"superadmin", label:`Dev (${users.filter(u=>u.role==="superadmin").length})`,    color:C.rose2 },
           { key:"admin",      label:`Admin (${users.filter(u=>u.role==="admin").length})`,       color:C.violet2 },
+          { key:"lg_leader",  label:`LG Leader (${users.filter(u=>u.role==="lg_leader").length})`, color:C.green2 },
           { key:"regular",    label:`Member (${users.filter(u=>u.role==="regular").length})`,    color:C.blue },
           { key:"deactivated",label:`Disabled (${users.filter(u=>u.role==="deactivated").length})`, color:C.mist },
         ].map(f=>(
@@ -427,7 +428,7 @@ const UserManagementPage = ({ role }) => {
                   <div style={{ fontSize:11, color:C.mist, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{u.email}</div>
                   {u.username && <div style={{ fontSize:11, color:C.blue, fontWeight:600 }}>@{u.username}</div>}
                 </div>
-                <Badge label={u.role==="superadmin"?"Dev":u.role} color={ROLE_COLORS[u.role]||C.slate}/>
+                <Badge label={u.role==="superadmin"?"Dev":u.role==="lg_leader"?"LG Leader":u.role} color={ROLE_COLORS[u.role]||C.slate}/>
               </div>
               <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                 <button onClick={()=>openEdit(u)} style={{ border:"none", background:C.blue3, borderRadius:R.sm, padding:"6px 12px", cursor:"pointer", fontSize:12, color:C.blue, fontWeight:600 }}>Edit</button>
@@ -477,6 +478,7 @@ const UserManagementPage = ({ role }) => {
                             fontSize:12, outline:"none", background:`${ROLE_COLORS[u.role]||C.slate}12`,
                             color:ROLE_COLORS[u.role]||C.slate, fontWeight:600, cursor:"pointer" }}>
                           <option value="regular">Member</option>
+                          <option value="lg_leader">LG Leader</option>
                           <option value="admin">Admin</option>
                           <option value="superadmin">Dev / Super</option>
                           <option value="deactivated">Deactivated</option>
@@ -553,6 +555,7 @@ const UserManagementPage = ({ role }) => {
           <select value={form.role} onChange={e=>setForm({...form,role:e.target.value})}
             style={{ padding:"10px 14px", border:`1.5px solid ${C.fog}`, borderRadius:R.md, fontSize:14, outline:"none", background:C.white, color:C.ink }}>
             <option value="regular">Regular Member</option>
+            <option value="lg_leader">Life Group Leader</option>
             <option value="admin">Admin</option>
             <option value="superadmin">Super Admin / Dev</option>
           </select>

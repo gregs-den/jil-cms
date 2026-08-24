@@ -15,7 +15,7 @@ const C = {
 const R = { xs:"6px", sm:"10px", md:"14px", lg:"18px", xl:"24px", xxl:"32px", full:"9999px" };
 const SH = { sm:"0 2px 8px rgba(0,0,0,.07)", md:"0 4px 20px rgba(0,0,0,.09)" };
 
-const CATEGORIES = ["WSAM","LGAM","WSAM/LGAM","First Timer","Guest"];
+const CATEGORIES = ["WSAM","LGAM","WSAM/LGAM","First Timer","Attendees","Guest"];
 const MEMBER_TYPES = ["Kids","Youth","Young Adult","Men","Women"];
 
 const SHEETJS_CDN = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
@@ -247,6 +247,7 @@ export default function MembersPage({ role, user }) {
   });
   const [uploadState, setUploadState] = useState({ status:"idle", rows:[], error:"" });
   const [branches, setBranches] = useState([]);
+  const [lgLeaders, setLgLeaders] = useState([]);
   const fileInputRef = useRef(null);
   const mob = useIsMobile();
 
@@ -305,6 +306,14 @@ export default function MembersPage({ role, user }) {
     .then(({ data }) => {
       if (data) setBranches(data);
     });
+  supabase
+    .from("profiles")
+    .select("members(name)")
+    .eq("role", "lg_leader")
+    .then(({ data }) => {
+      const names = (data || []).map(p => p.members?.name).filter(Boolean);
+      setLgLeaders([...new Set(names)].sort());
+    });
     }, [fetchMembers]);
 
   useEffect(() => {
@@ -339,6 +348,7 @@ export default function MembersPage({ role, user }) {
   c==="LGAM"        ? C.violet2:
   c==="WSAM/LGAM"   ? C.green  :
   c==="First Timer" ? C.amber  :
+  c==="Attendees"   ? C.blue2  :
   C.rose2;
 
   const downloadQR = () => {
@@ -1035,7 +1045,8 @@ export default function MembersPage({ role, user }) {
               </select>
             </div>
             <Inp label="Lifegroup Leader" value={form.lifegroup_leader}
-              onChange={v=>setForm({...form,lifegroup_leader:v})} placeholder="e.g. Ptr. Rico Cruz"/>
+              onChange={v=>setForm({...form,lifegroup_leader:v})}
+              options={[...new Set([...lgLeaders, ...(form.lifegroup_leader ? [form.lifegroup_leader] : [])])].sort()}/>
             <div style={{ display:"flex", gap:8, marginTop:4,flexWrap:"wrap" }}>
               <Btn label={saving?"Saving…":(editId?"Save Changes":"Add Member")}
                 onClick={save} disabled={saving} full

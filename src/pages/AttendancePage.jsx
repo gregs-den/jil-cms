@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { applyAttendanceCategoryRules } from "../lib/categoryTransfer";
 
 const logAction = async (action, details, entity, entityId) => {
   try {
@@ -274,6 +275,7 @@ function WalkInModal({ open, onClose, activeEvent, onSuccess }) {
       .select("points").eq("id", selected.id).maybeSingle();
     await supabase.from("members")
       .update({ points: (mData?.points || 0) + 10 }).eq("id", selected.id);
+    applyAttendanceCategoryRules(selected.id);
 
     setMsg({ text:`${selected.name} checked in ✓`, type:"success" });
     setSaving(false);
@@ -448,6 +450,7 @@ function ManualOverrideModal({ open, onClose, onSuccess }) {
       .select("points").eq("id", selected.id).maybeSingle();
     await supabase.from("members")
       .update({ points: (mData?.points || 0) + 10 }).eq("id", selected.id);
+    applyAttendanceCategoryRules(selected.id);
 
     setMsg({ text:`Attendance recorded for ${selected.name} on ${date} ✓`, type:"success" });
     setSaving(false);
