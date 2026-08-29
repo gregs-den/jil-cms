@@ -143,6 +143,7 @@ export default function ReportsPage({ role, user }) {
         <Pill label="📅 Attendance" active={tab==="attendance"} onClick={()=>setTab("attendance")} color={C.blue}/>
         <Pill label="💰 Finance" active={tab==="finance"} onClick={()=>setTab("finance")} color={C.green}/>
         <Pill label="👥 Members" active={tab==="members"} onClick={()=>setTab("members")} color={C.violet2}/>
+        <Pill label="📈 Growth" active={tab==="growth"} onClick={()=>setTab("growth")} color={C.amber2}/>
       </div>
 
       {tab === "attendance" && (
@@ -153,6 +154,9 @@ export default function ReportsPage({ role, user }) {
       )}
       {tab === "members" && (
         <MembersReport branches={branches} isSuperAdmin={isSuperAdmin} user={user} setToast={setToast}/>
+      )}
+      {tab === "growth" && (
+        <MembershipGrowthReport setToast={setToast}/>
       )}
     </div>
   );
@@ -588,6 +592,464 @@ function MembersReport({ branches, isSuperAdmin, user, setToast }) {
           )}
         </Card>
       )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════
+//  MEMBERSHIP GROWTH REPORT
+// ════════════════════════════════════════════════════════════
+const GROWTH_TYPES = ["Men", "Women", "Young Adult", "Youth", "Kids"];
+const GROWTH_TYPE_LABELS = { Youth: "KKB", Kids: "Children" };
+const CATEGORY_GROUPS = {
+  category1: { label: "Category 1 (WSAM + LGAM + WSAM/LGAM)", categories: ["WSAM", "LGAM", "WSAM/LGAM"] },
+  category2: { label: "Category 2 (WSAM + WSAM/LGAM)", categories: ["WSAM", "WSAM/LGAM"] },
+};
+
+// Life Group demographic classification — distinct from GROWTH_TYPES (a
+// person's own age/gender bracket): this is the TYPE OF GROUP a Life Group is
+// registered as, set explicitly by whoever creates it.
+const LG_GROUP_TYPES = ["Men", "Women", "Young Adult", "KKB", "Children", "Hetero"];
+// LG Attendance excludes Hetero (mixed) groups from its own breakdown — kept
+// as a valid Life Group type everywhere else.
+const LG_ATTENDANCE_TYPES = LG_GROUP_TYPES.filter(t => t !== "Hetero");
+
+const calcAge = bd => {
+  if (!bd) return null;
+  const d = new Date(bd), now = new Date();
+  return now.getFullYear() - d.getFullYear() -
+    (now < new Date(now.getFullYear(), d.getMonth(), d.getDate()) ? 1 : 0);
+};
+const autoType = (birthdate, gender) => {
+  const age = calcAge(birthdate);
+  if (age === null) return null;
+  if (age <= 12) return "Kids";
+  if (age <= 24) return "Youth";
+  if (age <= 35) return "Young Adult";
+  return gender === "Female" ? "Women" : "Men";
+};
+const liveType = m => autoType(m.birthdate, m.gender) || m.member_type;
+
+const monthLabel = dateStr => {
+  const [y, mo] = dateStr.split("-").map(Number);
+  return new Date(y, mo - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+};
+const firstOfMonthISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+};
+
+// ── Grouped bar chart: bars clustered by month, one bar per type ───
+const niceMax = v => {
+  if (v <= 0) return 10;
+  const mag = Math.pow(10, Math.floor(Math.log10(v)));
+  const step = mag / 2;
+  return Math.ceil(v / step) * step;
+};
+
+// Fixed categorical order (validated for adjacent-pair CVD separation).
+const SERIES_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"];
+
+// Rounded-top, square-bottom bar path — 4px data-end, baseline stays flat.
+const barPath = (x, y, w, h, r) => {
+  if (h <= 0) return "";
+  r = Math.min(r, w / 2, h);
+  return `M ${x} ${y+h} L ${x} ${y+r} Q ${x} ${y} ${x+r} ${y} L ${x+w-r} ${y} Q ${x+w} ${y} ${x+w} ${y+r} L ${x+w} ${y+h} Z`;
+};
+
+function GroupedBarChart({ months, series, title, subtitle }) {
+  const [hover, setHover] = useState(null); // { mi, si }
+  const W = 720, H = 300;
+  const padL = 48, padR = 20, padT = 20, padB = 40;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+
+  const allVals = series.flatMap(s => s.values);
+  const maxVal = niceMax(Math.max(1, ...allVals));
+  const yFor = v => padT + plotH - (v / maxVal) * plotH;
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(maxVal * f));
+
+  const n = series.length;
+  const clusterW = months.length ? plotW / months.length : plotW;
+  const clusterPad = Math.min(clusterW * 0.12, 14);
+  const gap = 2;
+  const barW = Math.min(20, (clusterW - clusterPad * 2 - gap * (n - 1)) / n);
+  const groupW = barW * n + gap * (n - 1);
+
+  return (
+    <div>
+      <div style={{ fontWeight:700, fontSize:14, color:C.ink, marginBottom:2 }}>{title}</div>
+      <div style={{ fontSize:12, color:C.mist, marginBottom:14 }}>{subtitle}</div>
+      <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
+        <div style={{ display:"flex", flexDirection:"column", gap:8, minWidth:120 }}>
+          {series.map(s => (
+            <div key={s.key} style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ width:10, height:10, background:s.color, borderRadius:2, flexShrink:0 }}/>
+              <span style={{ fontSize:12, color:C.ink, fontWeight:600 }}>{s.label}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ position:"relative", flex:1, minWidth:280 }}>
+          <svg viewBox={`0 0 ${W} ${H}`} style={{ width:"100%", height:"auto", display:"block" }}
+            onMouseLeave={()=>setHover(null)}>
+            {ticks.map((t,i) => {
+              const y = yFor(t);
+              return (
+                <g key={i}>
+                  <line x1={padL} y1={y} x2={W-padR} y2={y} stroke="#e1e0d9" strokeWidth={1}/>
+                  <text x={padL-8} y={y+4} textAnchor="end" fontSize={11} fill="#898781">{t.toLocaleString()}</text>
+                </g>
+              );
+            })}
+            <line x1={padL} y1={padT+plotH} x2={W-padR} y2={padT+plotH} stroke="#c3c2b7" strokeWidth={1}/>
+
+            {months.map((mo,mi) => {
+              const clusterX = padL + mi * clusterW + (clusterW - groupW) / 2;
+              return (
+                <g key={mo}>
+                  <text x={padL + mi * clusterW + clusterW/2} y={H-14} textAnchor="middle" fontSize={11} fill="#898781">
+                    {monthLabel(mo)}
+                  </text>
+                  {series.map((s, si) => {
+                    const v = s.values[mi];
+                    const x = clusterX + si * (barW + gap);
+                    const y = yFor(v);
+                    const h = padT + plotH - y;
+                    const isHover = hover && hover.mi === mi && hover.si === si;
+                    return (
+                      <path key={s.key} d={barPath(x, y, barW, h, 3)}
+                        fill={s.color} opacity={isHover ? 1 : 0.88}
+                        stroke={isHover ? "#0b0b0b" : "none"} strokeWidth={isHover ? 1.5 : 0}
+                        onMouseEnter={()=>setHover({ mi, si })}
+                        style={{ cursor:"pointer" }}/>
+                    );
+                  })}
+                </g>
+              );
+            })}
+          </svg>
+          {hover && (
+            <div style={{ position:"absolute", top:20,
+              left:`${Math.min(Math.max(((padL + hover.mi*clusterW + clusterW/2)/W)*100,10),90)}%`,
+              transform:"translateX(-50%)",
+              background:C.ink, color:"#fff", borderRadius:R.sm, padding:"6px 10px", fontSize:12,
+              pointerEvents:"none", whiteSpace:"nowrap" }}>
+              <div style={{ fontWeight:700 }}>{series[hover.si].values[hover.mi].toLocaleString()} {series[hover.si].label}</div>
+              <div style={{ color:"#c3c2b7" }}>{monthLabel(months[hover.mi])}</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const ATTENDANCE_MODE = "attendance";
+const FIRSTTIMERS_MODE = "firsttimers";
+const LG_COUNT_MODE = "lgcount";
+const LG_LEADERS_MODE = "lgleaders";
+const LG_MEMBERSHIP_MODE = "lgmembership";
+const LG_ATTENDANCE_MODE = "lgattendance";
+
+function MembershipGrowthReport({ setToast }) {
+  const [group, setGroup] = useState("category1");
+  const [snapshots, setSnapshots] = useState([]);
+  const [attendanceByMonth, setAttendanceByMonth] = useState({});
+  const [firstTimersByMonth, setFirstTimersByMonth] = useState({});
+  const [lgAttendanceByMonth, setLgAttendanceByMonth] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { syncAndLoad(); }, []);
+
+  const syncAndLoad = async () => {
+    setLoading(true);
+    try {
+      let all = [], from = 0;
+      while (true) {
+        const { data, error } = await supabase.from("members")
+          .select("category, member_type, birthdate, gender, is_active, life_group_id")
+          .eq("is_active", true)
+          .range(from, from + 999);
+        if (error) { setToast({ msg:"Failed: " + error.message, type:"error" }); break; }
+        if (!data || data.length === 0) break;
+        all = [...all, ...data];
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+
+      const thisMonth = firstOfMonthISO();
+      const rows = [];
+      Object.entries(CATEGORY_GROUPS).forEach(([key, def]) => {
+        const counts = Object.fromEntries(GROWTH_TYPES.map(t => [t, 0]));
+        all.forEach(m => {
+          if (!def.categories.includes(m.category)) return;
+          const t = liveType(m);
+          if (t in counts) counts[t] += 1;
+        });
+        GROWTH_TYPES.forEach(t => {
+          rows.push({ snapshot_month: thisMonth, category_group: key, member_type: t, count: counts[t] });
+        });
+      });
+
+      // No. of Life Groups / Life Group Leaders / LG Membership — all current-state
+      // counts, classified by each group's own registered type (not a person's
+      // personal demographic), snapshotted the same way as Category 1/2.
+      const { data: lgRows } = await supabase.from("life_groups").select("id, leader_name, group_type");
+      const groups = lgRows || [];
+      const groupTypeById = Object.fromEntries(groups.map(g => [g.id, g.group_type]));
+
+      const membershipCounts = Object.fromEntries(LG_GROUP_TYPES.map(t => [t, 0]));
+      all.forEach(m => {
+        const t = m.life_group_id ? groupTypeById[m.life_group_id] : null;
+        if (t && t in membershipCounts) membershipCounts[t] += 1;
+      });
+
+      LG_GROUP_TYPES.forEach(t => {
+        const groupsOfType = groups.filter(g => g.group_type === t);
+        rows.push({ snapshot_month: thisMonth, category_group: LG_COUNT_MODE, member_type: t, count: groupsOfType.length });
+        rows.push({ snapshot_month: thisMonth, category_group: LG_LEADERS_MODE, member_type: t, count: new Set(groupsOfType.map(g => g.leader_name)).size });
+        rows.push({ snapshot_month: thisMonth, category_group: LG_MEMBERSHIP_MODE, member_type: t, count: membershipCounts[t] });
+      });
+
+      const { error: upsertError } = await supabase.from("membership_snapshots")
+        .upsert(rows, { onConflict: "snapshot_month,category_group,member_type" });
+      if (upsertError) setToast({ msg:"Snapshot save failed: " + upsertError.message, type:"error" });
+
+      const { data: history, error: historyError } = await supabase
+        .from("membership_snapshots").select("*").order("snapshot_month", { ascending: true });
+      if (historyError) { setToast({ msg:"Failed: " + historyError.message, type:"error" }); setLoading(false); return; }
+      setSnapshots(history || []);
+
+      // Sunday Service Attendance: computed straight from real attendance history
+      // (each row already carries a real date, so no snapshotting needed). The
+      // "average" per month = total check-ins that month / distinct service dates
+      // that month — i.e. how many Sundays occurred that month — so someone who
+      // attends all 4 Sundays counts as 4 check-ins spread across 4 Sundays, not
+      // a 4x inflated headcount.
+      let attRows = [], attFrom = 0;
+      while (true) {
+        const { data, error } = await supabase.from("attendance")
+          .select("member_id, service_date, members(birthdate, gender, member_type)")
+          .range(attFrom, attFrom + 999);
+        if (error) { setToast({ msg:"Failed: " + error.message, type:"error" }); break; }
+        if (!data || data.length === 0) break;
+        attRows = [...attRows, ...data];
+        if (data.length < 1000) break;
+        attFrom += 1000;
+      }
+
+      const byMonth = {};
+      attRows.forEach(r => {
+        if (!r.service_date || !r.members) return;
+        const mo = `${r.service_date.slice(0, 7)}-01`;
+        byMonth[mo] ??= { sundays: new Set(), counts: Object.fromEntries(GROWTH_TYPES.map(t => [t, 0])) };
+        byMonth[mo].sundays.add(r.service_date);
+        const t = liveType(r.members);
+        if (t in byMonth[mo].counts) byMonth[mo].counts[t] += 1;
+      });
+      setAttendanceByMonth(byMonth);
+
+      // First Timers: each member's FIRST-EVER attendance date, bucketed by month —
+      // i.e. brand-new visitors that month, not a snapshot of current category.
+      const firstDateByMember = {}, infoByMember = {};
+      attRows.forEach(r => {
+        if (!r.member_id || !r.service_date) return;
+        if (!firstDateByMember[r.member_id] || r.service_date < firstDateByMember[r.member_id]) {
+          firstDateByMember[r.member_id] = r.service_date;
+        }
+        if (r.members && !infoByMember[r.member_id]) infoByMember[r.member_id] = r.members;
+      });
+      const ftByMonth = {};
+      Object.entries(firstDateByMember).forEach(([memberId, date]) => {
+        const mo = `${date.slice(0, 7)}-01`;
+        ftByMonth[mo] ??= Object.fromEntries(GROWTH_TYPES.map(t => [t, 0]));
+        const info = infoByMember[memberId];
+        const t = info ? liveType(info) : null;
+        if (t && t in ftByMonth[mo]) ftByMonth[mo][t] += 1;
+      });
+      setFirstTimersByMonth(ftByMonth);
+
+      // LG Attendance: average = check-ins ÷ sessions that month, bucketed by
+      // the group's own type instead of the member's personal type, with the
+      // "sessions" denominator scoped per group type too (different groups
+      // can meet on different days).
+      let lgAttRows = [], lgAttFrom = 0;
+      while (true) {
+        const { data, error } = await supabase.from("lg_attendance")
+          .select("session_date, life_groups(group_type)")
+          .range(lgAttFrom, lgAttFrom + 999);
+        if (error) { setToast({ msg:"Failed: " + error.message, type:"error" }); break; }
+        if (!data || data.length === 0) break;
+        lgAttRows = [...lgAttRows, ...data];
+        if (data.length < 1000) break;
+        lgAttFrom += 1000;
+      }
+
+      const lgByMonth = {};
+      lgAttRows.forEach(r => {
+        const t = r.life_groups?.group_type;
+        if (!r.session_date || !t) return;
+        const mo = `${r.session_date.slice(0, 7)}-01`;
+        lgByMonth[mo] ??= { sessionsByType: {}, counts: Object.fromEntries(LG_GROUP_TYPES.map(x => [x, 0])) };
+        lgByMonth[mo].sessionsByType[t] ??= new Set();
+        lgByMonth[mo].sessionsByType[t].add(r.session_date);
+        lgByMonth[mo].counts[t] += 1;
+      });
+      setLgAttendanceByMonth(lgByMonth);
+    } catch (err) {
+      setToast({ msg:"Unexpected error: " + err.message, type:"error" });
+    }
+    setLoading(false);
+  };
+
+  const isAttendance = group === ATTENDANCE_MODE;
+  const isFirstTimers = group === FIRSTTIMERS_MODE;
+  const isLgAttendance = group === LG_ATTENDANCE_MODE;
+  const isLgSnapshot = group === LG_COUNT_MODE || group === LG_LEADERS_MODE || group === LG_MEMBERSHIP_MODE;
+
+  const activeTypes = isLgAttendance ? LG_ATTENDANCE_TYPES
+    : isLgSnapshot ? LG_GROUP_TYPES
+    : GROWTH_TYPES;
+  const activeLabel = t => (isLgSnapshot || isLgAttendance) ? t : (GROWTH_TYPE_LABELS[t] || t);
+
+  const months = isAttendance
+    ? Object.keys(attendanceByMonth).sort()
+    : isFirstTimers
+    ? Object.keys(firstTimersByMonth).sort()
+    : isLgAttendance
+    ? Object.keys(lgAttendanceByMonth).sort()
+    : [...new Set(snapshots.filter(s => isLgSnapshot ? s.category_group === group : true).map(s => s.snapshot_month))].sort();
+
+  const cell = (month, type) => {
+    if (isAttendance) {
+      const m = attendanceByMonth[month];
+      if (!m || m.sundays.size === 0) return 0;
+      return Math.round(m.counts[type] / m.sundays.size);
+    }
+    if (isFirstTimers) return firstTimersByMonth[month]?.[type] ?? 0;
+    if (isLgAttendance) {
+      const m = lgAttendanceByMonth[month];
+      const sessions = m?.sessionsByType?.[type]?.size || 0;
+      if (!m || sessions === 0) return 0;
+      return Math.round(m.counts[type] / sessions);
+    }
+    return snapshots.find(s => s.snapshot_month === month && s.category_group === group && s.member_type === type)?.count ?? 0;
+  };
+
+  const columns = ["Type", ...months.map(monthLabel)];
+  const totalRowLabel = isAttendance || isLgAttendance ? "Average Attendance"
+    : group === LG_COUNT_MODE ? "Total No. of Life Groups"
+    : group === LG_LEADERS_MODE ? "Total No. of Life Group Leaders"
+    : group === LG_MEMBERSHIP_MODE ? "Total LG Membership"
+    : "Total Membership";
+  const tableRows = [
+    ...activeTypes.map(t => [activeLabel(t), ...months.map(mo => cell(mo, t))]),
+    [totalRowLabel, ...months.map(mo => activeTypes.reduce((sum, t) => sum + cell(mo, t), 0))],
+  ];
+  const chartSeries = activeTypes.map((t, i) => ({
+    key: t,
+    label: activeLabel(t),
+    color: SERIES_COLORS[i],
+    values: months.map(mo => cell(mo, t)),
+  }));
+
+  const title = isAttendance ? "Sunday Service Attendance"
+    : isFirstTimers ? "Total No. of First Timers (Sunday Service)"
+    : group === LG_COUNT_MODE ? "No. of Life Groups"
+    : group === LG_LEADERS_MODE ? "Life Group Leaders"
+    : group === LG_MEMBERSHIP_MODE ? "LG Membership"
+    : group === LG_ATTENDANCE_MODE ? "LG Attendance"
+    : CATEGORY_GROUPS[group].label;
+
+  return (
+    <div>
+      <Card style={{ marginBottom:16 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12 }}>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+            {Object.entries(CATEGORY_GROUPS).map(([key, def]) => (
+              <Pill key={key} label={def.label} active={group===key} onClick={()=>setGroup(key)} color={C.amber2}/>
+            ))}
+            <Pill label="Sunday Service Attendance" active={isAttendance} onClick={()=>setGroup(ATTENDANCE_MODE)} color={C.blue}/>
+            <Pill label="First Timers" active={isFirstTimers} onClick={()=>setGroup(FIRSTTIMERS_MODE)} color={C.rose2}/>
+            <Pill label="No. of Life Groups" active={group===LG_COUNT_MODE} onClick={()=>setGroup(LG_COUNT_MODE)} color={C.violet2}/>
+            <Pill label="Life Group Leaders" active={group===LG_LEADERS_MODE} onClick={()=>setGroup(LG_LEADERS_MODE)} color={C.violet2}/>
+            <Pill label="LG Membership" active={group===LG_MEMBERSHIP_MODE} onClick={()=>setGroup(LG_MEMBERSHIP_MODE)} color={C.violet2}/>
+            <Pill label="LG Attendance" active={isLgAttendance} onClick={()=>setGroup(LG_ATTENDANCE_MODE)} color={C.violet2}/>
+          </div>
+          <div style={{ fontSize:12, color:C.mist }}>
+            {isAttendance
+              ? "Average = total check-ins ÷ Sundays that month."
+              : isFirstTimers
+              ? "Each member counted once, in the month of their first-ever attendance."
+              : isLgAttendance
+              ? "Average = check-ins ÷ sessions that month, per group type."
+              : isLgSnapshot
+              ? "Classified by each Life Group's own registered type — snapshots update automatically each month you view this report."
+              : "Snapshots update automatically each month you view this report."}
+          </div>
+        </div>
+      </Card>
+
+      {!loading && months.length > 0 && (
+        <Card style={{ marginBottom:16 }}>
+          <GroupedBarChart months={months} series={chartSeries} title={title}
+            subtitle={isAttendance ? "Average Sunday attendance by type"
+              : isFirstTimers ? "New first-time attendees by type"
+              : isLgAttendance ? "Average Bible study attendance by group type"
+              : isLgSnapshot ? "By Life Group type" : "Membership by type"}/>
+        </Card>
+      )}
+
+      <Card>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:10 }}>
+          <div>
+            <div style={{ fontWeight:700, fontSize:15, color:C.ink }}>{title}</div>
+            <div style={{ fontSize:12, color:C.mist }}>{months.length} month{months.length!==1?"s":""} recorded</div>
+          </div>
+          {months.length > 0 && (
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={()=>exportExcel(title, columns, tableRows, "membership-growth")}
+                style={{ padding:"8px 16px", borderRadius:R.full, background:C.green3, color:C.green,
+                  border:`1.5px solid ${C.green}`, fontWeight:600, fontSize:12, cursor:"pointer" }}>
+                📊 Export Excel
+              </button>
+              <button onClick={()=>exportPDF(title, columns, tableRows, "membership-growth")}
+                style={{ padding:"8px 16px", borderRadius:R.full, background:C.rose3, color:C.rose,
+                  border:`1.5px solid ${C.rose}`, fontWeight:600, fontSize:12, cursor:"pointer" }}>
+                📄 Export PDF
+              </button>
+            </div>
+          )}
+        </div>
+
+        {loading ? (
+          <div style={{ textAlign:"center", padding:"28px 0", color:C.mist }}>Loading…</div>
+        ) : months.length === 0 ? (
+          <div style={{ textAlign:"center", padding:"28px 0", color:C.mist }}>No snapshots recorded yet.</div>
+        ) : (
+          <div style={{ overflowX:"auto" }}>
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+              <thead>
+                <tr style={{ background:C.fog }}>
+                  {columns.map(h=>(
+                    <th key={h} style={{ textAlign:"left", padding:"10px 14px", color:C.slate,
+                      fontWeight:600, fontSize:11, textTransform:"uppercase", letterSpacing:.4, whiteSpace:"nowrap" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {tableRows.map((r, i) => (
+                  <tr key={r[0]} style={{ borderTop:`1px solid ${C.fog}`, background: i===tableRows.length-1?C.fog:C.white }}>
+                    {r.map((v, j) => (
+                      <td key={j} style={{ padding:"10px 14px", fontWeight: j===0||i===tableRows.length-1?700:400,
+                        color: i===tableRows.length-1?C.ink:C.slate }}>{v}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

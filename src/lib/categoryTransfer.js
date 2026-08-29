@@ -85,10 +85,10 @@ export async function applyLifeGroupCategoryRule(memberId) {
   try {
     const { data: member } = await supabase
       .from("members")
-      .select("id, category, lifegroup_leader")
+      .select("id, category, life_group_id")
       .eq("id", memberId)
       .maybeSingle();
-    if (!member || !member.lifegroup_leader || member.category !== "Attendees") return;
+    if (!member || !member.life_group_id || member.category !== "Attendees") return;
 
     const { data: records } = await supabase
       .from("lg_attendance")
@@ -109,7 +109,7 @@ export async function applyLifeGroupCategoryRule(memberId) {
     const { data: groupRows } = await supabase
       .from("lg_attendance")
       .select("session_date")
-      .eq("life_group_leader", member.lifegroup_leader)
+      .eq("life_group_id", member.life_group_id)
       .gte("session_date", toISODate(firstDate))
       .lte("session_date", toISODate(windowEnd));
     const distinctSessions = new Set((groupRows || []).map(r => r.session_date)).size;

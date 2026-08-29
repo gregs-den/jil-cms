@@ -243,11 +243,11 @@ export default function MembersPage({ role, user }) {
   const [form, setForm] = useState({
   name:"", birthdate:"", address:"", gender:"Male",
   category:"Official Member", type:"Young Adult",
-  branch:"", branch_id:"", lifegroup_leader:""
+  branch:"", branch_id:"", lifegroup_leader:"", life_group_id:""
   });
   const [uploadState, setUploadState] = useState({ status:"idle", rows:[], error:"" });
   const [branches, setBranches] = useState([]);
-  const [lgLeaders, setLgLeaders] = useState([]);
+  const [lifeGroups, setLifeGroups] = useState([]);
   const fileInputRef = useRef(null);
   const mob = useIsMobile();
 
@@ -307,12 +307,11 @@ export default function MembersPage({ role, user }) {
       if (data) setBranches(data);
     });
   supabase
-    .from("profiles")
-    .select("members(name)")
-    .eq("role", "lg_leader")
+    .from("life_groups")
+    .select("id, name, leader_name, group_type")
+    .order("name")
     .then(({ data }) => {
-      const names = (data || []).map(p => p.members?.name).filter(Boolean);
-      setLgLeaders([...new Set(names)].sort());
+      if (data) setLifeGroups(data);
     });
     }, [fetchMembers]);
 
@@ -424,6 +423,7 @@ export default function MembersPage({ role, user }) {
     branch:           form.branch,
     branch_id:        form.branch_id || null,
     lifegroup_leader: form.lifegroup_leader.trim(),
+    life_group_id:    form.life_group_id || null,
     ...(birthdateChanged ? { birthdate_updated_at: form.birthdate ? new Date().toISOString() : null } : {}),
   };
 
@@ -450,7 +450,7 @@ export default function MembersPage({ role, user }) {
   setShowModal(false);
   setEditId(null);
   setForm({ name:"", birthdate:"", address:"", category:"Official Member",
-            type:"Young Adult", branch:"", lifegroup_leader:"" });
+            type:"Young Adult", branch:"", lifegroup_leader:"", life_group_id:"" });
   fetchMembers();
 };
 
@@ -471,6 +471,7 @@ export default function MembersPage({ role, user }) {
       branch:           m.branch || "",
       branch_id:        m.branch_id || "",
       lifegroup_leader: m.lifegroup_leader || "",
+      life_group_id: m.life_group_id || "",
       gender:           m.gender || "",
     });
     setEditId(m.id);
@@ -628,7 +629,7 @@ export default function MembersPage({ role, user }) {
             setEditId(null);
             setForm({ name:"", birthdate:"", address:"", gender:"Male",
               category:"Official Member", type:"Young Adult",
-              branch:"Main – Pinamalayan", lifegroup_leader:"" });
+              branch:"Main – Pinamalayan", lifegroup_leader:"", life_group_id:"" });
             setTab("manual");
             setShowModal(true);
           }} sm
@@ -883,7 +884,7 @@ export default function MembersPage({ role, user }) {
         resetUpload();
         setForm({ name:"", birthdate:"", address:"", gender:"Male",
           category:"Official Member", type:"Young Adult",
-          branch:"Main – Pinamalayan", lifegroup_leader:"" });
+          branch:"Main – Pinamalayan", lifegroup_leader:"", life_group_id:"" });
       }}
         title={editId?"Edit Member":"Add Member"} width={480}>
 
@@ -1044,9 +1045,20 @@ export default function MembersPage({ role, user }) {
                 ))}
               </select>
             </div>
-            <Inp label="Lifegroup Leader" value={form.lifegroup_leader}
-              onChange={v=>setForm({...form,lifegroup_leader:v})}
-              options={[...new Set([...lgLeaders, ...(form.lifegroup_leader ? [form.lifegroup_leader] : [])])].sort()}/>
+            <div style={{ display:"flex", flexDirection:"column", gap:5, marginBottom:14 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:C.slate, letterSpacing:.2 }}>Life Group</label>
+              <select value={form.life_group_id} onChange={e=>{
+                    const picked = lifeGroups.find(g=>g.id===e.target.value);
+                    setForm({...form, life_group_id:e.target.value, lifegroup_leader: picked?.leader_name||""});
+                  }}
+                style={{ padding:"10px 14px", border:`1.5px solid ${C.fog}`, borderRadius:R.md,
+                  fontSize:14, outline:"none", background:C.white, color:C.ink, appearance:"none" }}>
+                <option value="">— Not assigned —</option>
+                {lifeGroups.map(g=>(
+                  <option key={g.id} value={g.id}>{g.name} — {g.leader_name} ({g.group_type||"Untyped"})</option>
+                ))}
+              </select>
+            </div>
             <div style={{ display:"flex", gap:8, marginTop:4,flexWrap:"wrap" }}>
               <Btn label={saving?"Saving…":(editId?"Save Changes":"Add Member")}
                 onClick={save} disabled={saving} full
@@ -1056,7 +1068,7 @@ export default function MembersPage({ role, user }) {
                 setEditId(null);
                 setForm({ name:"", birthdate:"", address:"", gender:"Male",
                   category:"Official Member", type:"Young Adult",
-                  branch:"Main – Pinamalayan", lifegroup_leader:"" });
+                  branch:"Main – Pinamalayan", lifegroup_leader:"", life_group_id:"" });
               }} outline full/>
             </div>
           </>
