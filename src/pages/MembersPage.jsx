@@ -1045,20 +1045,22 @@ export default function MembersPage({ role, user }) {
                 ))}
               </select>
             </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:5, marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:C.slate, letterSpacing:.2 }}>Life Group</label>
-              <select value={form.life_group_id} onChange={e=>{
-                    const picked = lifeGroups.find(g=>g.id===e.target.value);
-                    setForm({...form, life_group_id:e.target.value, lifegroup_leader: picked?.leader_name||""});
-                  }}
-                style={{ padding:"10px 14px", border:`1.5px solid ${C.fog}`, borderRadius:R.md,
-                  fontSize:14, outline:"none", background:C.white, color:C.ink, appearance:"none" }}>
-                <option value="">— Not assigned —</option>
-                {lifeGroups.map(g=>(
-                  <option key={g.id} value={g.id}>{g.name} — {g.leader_name} ({g.group_type||"Untyped"})</option>
-                ))}
-              </select>
-            </div>
+            {editId && (
+              <div style={{ display:"flex", flexDirection:"column", gap:5, marginBottom:14 }}>
+                <label style={{ fontSize:12, fontWeight:600, color:C.slate, letterSpacing:.2 }}>Life Group</label>
+                <select value={form.life_group_id} onChange={e=>{
+                      const picked = lifeGroups.find(g=>g.id===e.target.value);
+                      setForm({...form, life_group_id:e.target.value, lifegroup_leader: picked?.leader_name||""});
+                    }}
+                  style={{ padding:"10px 14px", border:`1.5px solid ${C.fog}`, borderRadius:R.md,
+                    fontSize:14, outline:"none", background:C.white, color:C.ink, appearance:"none" }}>
+                  <option value="">— Not assigned —</option>
+                  {lifeGroups.map(g=>(
+                    <option key={g.id} value={g.id}>{g.name} — {g.leader_name} ({g.group_type||"Untyped"})</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div style={{ display:"flex", gap:8, marginTop:4,flexWrap:"wrap" }}>
               <Btn label={saving?"Saving…":(editId?"Save Changes":"Add Member")}
                 onClick={save} disabled={saving} full
